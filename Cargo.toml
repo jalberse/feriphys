@@ -12,3 +12,10 @@ log = "0.4"
 wgpu = "0.13"
 pollster = "0.2"
 bytemuck = { version = "1.4", features = [ "derive" ] }
+# image's rayon decoding uses threads, and WASM doesn't support threads, so using
+# full image features would crash if we load a jpeg on the web.
+# This project isn't being built for web though, so we're OK to use the full
+# image library. However, if this project is ever built for web,
+# it should limit the features to features = ["png", "jpeg"]
+image = "0.24"
+anyhow = "1.0"
