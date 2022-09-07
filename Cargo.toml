@@ -19,3 +19,4 @@ bytemuck = { version = "1.4", features = [ "derive" ] }
 # it should limit the features to features = ["png", "jpeg"]
 image = "0.24"
 anyhow = "1.0"
+cgmath = "0.18"
