@@ -4,9 +4,32 @@ use cgmath::prelude::*;
 use itertools::Itertools;
 use wgpu::util::DeviceExt;
 
+fn get_normals(
+    vertex_positions: &Vec<cgmath::Vector3<f32>>,
+    indices: &Vec<u16>,
+) -> Vec<cgmath::Vector3<f32>> {
+    // Calculate the normals of each vertex by averaging the normals of all adjacent faces.
+    let mut normals = Vec::new();
+    for _ in 0..vertex_positions.len() {
+        normals.push(cgmath::Vector3::new(0.0, 0.0, 0.0));
+    }
+    for (a, b, c) in indices.iter().tuples() {
+        let edge1 = vertex_positions[*a as usize] - vertex_positions[*b as usize];
+        let edge2 = vertex_positions[*a as usize] - vertex_positions[*c as usize];
+        let face_normal = edge1.cross(edge2);
+        // Add this face's normal to each vertex's normal.
+        normals[*a as usize] += face_normal;
+        normals[*b as usize] += face_normal;
+        normals[*c as usize] += face_normal;
+    }
+    normals
+        .iter()
+        .map(|n| n.normalize())
+        .collect::<Vec<cgmath::Vector3<f32>>>()
+}
+
 pub fn get_hexagon(device: &wgpu::Device) -> model::ColoredMesh {
-    // Make a colored mesh to draw.
-    let vertex_positions: &[cgmath::Vector3<f32>; 5] = &[
+    let vertex_positions = vec![
         cgmath::Vector3 {
             x: -0.0868241,
             y: 0.49240386,
@@ -34,24 +57,10 @@ pub fn get_hexagon(device: &wgpu::Device) -> model::ColoredMesh {
         },
     ];
 
-    let indices: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+    let indices: Vec<u16> = vec![0, 1, 4, 1, 2, 4, 2, 3, 4];
     let num_indices = indices.len() as u32;
 
-    // Calculate the normals of each vertex by averaging the normals of all adjacent faces.
-    let mut normals = Vec::new();
-    for _ in 0..vertex_positions.len() {
-        normals.push(cgmath::Vector3::new(0.0, 0.0, 0.0));
-    }
-    for (a, b, c) in indices.iter().tuples() {
-        let edge1 = vertex_positions[*a as usize] - vertex_positions[*b as usize];
-        let edge2 = vertex_positions[*a as usize] - vertex_positions[*c as usize];
-        let face_normal = edge1.cross(edge2);
-        // Add this face's normal to each vertex's normal.
-        normals[*a as usize] += face_normal;
-        normals[*b as usize] += face_normal;
-        normals[*c as usize] += face_normal;
-    }
-    let normals: Vec<cgmath::Vector3<f32>> = normals.iter().map(|n| n.normalize()).collect();
+    let normals = get_normals(&vertex_positions, &indices);
 
     let vertices = vertex_positions
         .iter()
@@ -65,6 +74,7 @@ pub fn get_hexagon(device: &wgpu::Device) -> model::ColoredMesh {
         })
         .collect::<Vec<_>>();
     dbg!(&vertices);
+    dbg!(&indices);
 
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("mesh colored vertex buffer"),
