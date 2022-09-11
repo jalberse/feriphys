@@ -387,7 +387,7 @@ impl State {
             )
         };
 
-        let colored_mesh = forms::get_hexagon(&device);
+        let colored_mesh = forms::get_hexagon(&device, [0.5, 0.0, 0.5]);
 
         Self {
             surface,

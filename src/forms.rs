@@ -28,7 +28,30 @@ fn get_normals(
         .collect::<Vec<cgmath::Vector3<f32>>>()
 }
 
-pub fn get_hexagon(device: &wgpu::Device) -> model::ColoredMesh {
+/// Zips the vertex positions with their normals, and adds the color,
+/// to get the ColoredVertex. Normals can be gotten from vertex positions
+/// and their indices using get_normals().
+///
+/// Panics if vertex_position and normals are of different lengths.
+fn get_colored_vertices(
+    vertex_positions: &Vec<cgmath::Vector3<f32>>,
+    normals: &Vec<cgmath::Vector3<f32>>,
+    color: [f32; 3],
+) -> Vec<model::ColoredVertex> {
+    vertex_positions
+        .iter()
+        .zip(normals.iter())
+        .map(|(v, n)| -> model::ColoredVertex {
+            model::ColoredVertex {
+                position: [v.x, v.y, v.z],
+                color,
+                normal: [n.x, n.y, n.z],
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+pub fn get_hexagon(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
     let vertex_positions = vec![
         cgmath::Vector3 {
             x: -0.0868241,
@@ -62,19 +85,7 @@ pub fn get_hexagon(device: &wgpu::Device) -> model::ColoredMesh {
 
     let normals = get_normals(&vertex_positions, &indices);
 
-    let vertices = vertex_positions
-        .iter()
-        .zip(normals.iter())
-        .map(|(v, n)| -> model::ColoredVertex {
-            model::ColoredVertex {
-                position: [v.x, v.y, v.z],
-                color: [0.5, 0.0, 0.5],
-                normal: [n.x, n.y, n.z],
-            }
-        })
-        .collect::<Vec<_>>();
-    dbg!(&vertices);
-    dbg!(&indices);
+    let vertices = get_colored_vertices(&vertex_positions, &normals, color);
 
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("mesh colored vertex buffer"),
