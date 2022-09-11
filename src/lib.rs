@@ -382,7 +382,7 @@ impl State {
                 &layout,
                 config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ColoredVertex::desc()],
+                &[model::ColoredVertex::desc(), InstanceRaw::desc()],
                 shader,
             )
         };
