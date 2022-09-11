@@ -2,7 +2,7 @@ mod camera;
 mod model;
 mod resources;
 mod texture;
-use crate::model::DrawModel;
+use crate::model::{DrawColoredMesh, DrawModel};
 
 use cgmath::prelude::*;
 use model::Vertex;
@@ -142,6 +142,8 @@ struct State {
     light_bind_group: wgpu::BindGroup,
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
+    colored_render_pipeline: wgpu::RenderPipeline,
+    colored_mesh: model::ColoredMesh,
 }
 
 impl State {
@@ -364,6 +366,71 @@ impl State {
         let obj_model =
             resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
 
+        let colored_render_pipeline = {
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Colored Pipeline Layout"),
+                bind_group_layouts: &[&camera_bind_group_layout, &light_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+            let shader = wgpu::ShaderModuleDescriptor {
+                label: Some("Colored Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("color_shader.wgsl").into()),
+            };
+            create_render_pipeline(
+                &device,
+                &layout,
+                config.format,
+                Some(texture::Texture::DEPTH_FORMAT),
+                &[model::ColoredVertex::desc()],
+                shader,
+            )
+        };
+
+        // Make a colored mesh to draw.
+        let vertices: &[model::ColoredVertex] = &[
+            model::ColoredVertex {
+                position: [-0.0868241, 0.49240386, 0.0],
+                color: [0.5, 0.0, 0.5],
+            }, // A
+            model::ColoredVertex {
+                position: [-0.49513406, 0.06958647, 0.0],
+                color: [0.5, 0.0, 0.5],
+            }, // B
+            model::ColoredVertex {
+                position: [-0.21918549, -0.44939706, 0.0],
+                color: [0.5, 0.0, 0.5],
+            }, // C
+            model::ColoredVertex {
+                position: [0.35966998, -0.3473291, 0.0],
+                color: [0.5, 0.0, 0.5],
+            }, // D
+            model::ColoredVertex {
+                position: [0.44147372, 0.2347359, 0.0],
+                color: [0.5, 0.0, 0.5],
+            }, // E
+        ];
+
+        let indices: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+        let num_indices = indices.len() as u32;
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("mesh colored vertex buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("mesh colored index buffer"),
+            contents: bytemuck::cast_slice(&indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let colored_mesh = model::ColoredMesh {
+            name: "Colored Mesh".to_string(),
+            vertex_buffer,
+            index_buffer,
+            num_elements: num_indices,
+        };
+
         Self {
             surface,
             device,
@@ -386,6 +453,8 @@ impl State {
             light_bind_group,
             light_render_pipeline,
             mouse_pressed: false,
+            colored_render_pipeline,
+            colored_mesh,
         }
     }
 
@@ -505,22 +574,29 @@ impl State {
             });
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
-            use crate::model::DrawLight;
-            render_pass.set_pipeline(&self.light_render_pipeline);
-            render_pass.draw_light_model(
-                &self.obj_model,
+            // use crate::model::DrawLight;
+            // render_pass.set_pipeline(&self.light_render_pipeline);
+            // render_pass.draw_light_model(
+            //     &self.obj_model,
+            //     &self.camera_bind_group,
+            //     &self.light_bind_group,
+            // );
+            //
+            // render_pass.set_pipeline(&self.render_pipeline);
+            //
+            // render_pass.draw_model_instanced(
+            //     &self.obj_model,
+            //     0..self.instances.len() as u32,
+            //     &self.camera_bind_group,
+            //     &self.light_bind_group,
+            // );
+
+            render_pass.set_pipeline(&self.colored_render_pipeline);
+            render_pass.draw_colored_mesh(
+                &self.colored_mesh,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );
-
-            render_pass.set_pipeline(&self.render_pipeline);
-
-            render_pass.draw_model_instanced(
-                &self.obj_model,
-                0..self.instances.len() as u32,
-                &self.camera_bind_group,
-                &self.light_bind_group,
-            )
         }
 
         // Finish up the command buffer in finish(), and submit to the gpu's queue!

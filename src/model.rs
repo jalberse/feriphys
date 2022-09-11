@@ -8,6 +8,80 @@ pub trait Vertex {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct ColoredVertex {
+    pub position: [f32; 3],
+    pub color: [f32; 3],
+}
+
+impl ColoredVertex {
+    const ATTRIBS: [wgpu::VertexAttribute; 2] =
+        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3,];
+}
+
+impl Vertex for ColoredVertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<ColoredVertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &Self::ATTRIBS,
+        }
+    }
+}
+
+pub struct ColoredMesh {
+    pub name: String,
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub num_elements: u32,
+}
+
+pub trait DrawColoredMesh<'a> {
+    fn draw_colored_mesh(
+        &mut self,
+        mesh: &'a ColoredMesh,
+        camera_bind_group: &'a wgpu::BindGroup,
+        light_bind_group: &'a wgpu::BindGroup,
+    );
+    fn draw_colored_mesh_instanced(
+        &mut self,
+        mesh: &'a ColoredMesh,
+        instances: Range<u32>,
+        camera_bind_group: &'a wgpu::BindGroup,
+        light_bind_group: &'a wgpu::BindGroup,
+    );
+}
+
+impl<'a, 'b> DrawColoredMesh<'b> for wgpu::RenderPass<'a>
+where
+    'b: 'a,
+{
+    fn draw_colored_mesh(
+        &mut self,
+        mesh: &'b ColoredMesh,
+        camera_bind_group: &'b wgpu::BindGroup,
+        light_bind_group: &'b wgpu::BindGroup,
+    ) {
+        self.draw_colored_mesh_instanced(mesh, 0..1, camera_bind_group, light_bind_group);
+    }
+
+    fn draw_colored_mesh_instanced(
+        &mut self,
+        mesh: &'b ColoredMesh,
+        instances: Range<u32>,
+        camera_bind_group: &'b wgpu::BindGroup,
+        light_bind_group: &'b wgpu::BindGroup,
+    ) {
+        self.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+        self.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        self.set_bind_group(0, camera_bind_group, &[]);
+        self.set_bind_group(1, light_bind_group, &[]);
+        self.draw_indexed(0..mesh.num_elements, 0, instances);
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ModelVertex {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],
