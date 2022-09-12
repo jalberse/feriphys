@@ -1,8 +1,9 @@
 mod camera;
+mod forms;
 mod model;
 mod resources;
 mod texture;
-use crate::model::DrawModel;
+use crate::model::DrawColoredMesh;
 
 use cgmath::prelude::*;
 use model::Vertex;
@@ -13,17 +14,6 @@ use winit::{
     window::Window,
     window::WindowBuilder,
 };
-
-// Temporary constants for use as we develop instancing.
-const NUM_INSTANCES_PER_ROW: u32 = 10;
-
-#[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.0,
-    0.0, 0.0, 0.5, 1.0,
-);
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -137,6 +127,7 @@ struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
+    #[allow(dead_code)]
     render_pipeline: wgpu::RenderPipeline,
     obj_model: model::Model,
     camera: camera::Camera,
@@ -145,6 +136,7 @@ struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: camera::CameraController,
+    #[allow(dead_code)]
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
@@ -153,6 +145,8 @@ struct State {
     light_bind_group: wgpu::BindGroup,
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
+    colored_render_pipeline: wgpu::RenderPipeline,
+    colored_mesh: model::ColoredMesh,
 }
 
 impl State {
@@ -227,28 +221,17 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
-        const SPACE_BETWEEN: f32 = 3.0;
-        let instances = (0..NUM_INSTANCES_PER_ROW)
-            .flat_map(|z| {
-                (0..NUM_INSTANCES_PER_ROW).map(move |x| {
-                    let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-                    let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-
-                    let position = cgmath::Vector3 { x, y: 0.0, z };
-
-                    let rotation = if position.is_zero() {
-                        cgmath::Quaternion::from_axis_angle(
-                            cgmath::Vector3::unit_z(),
-                            cgmath::Deg(0.0),
-                        )
-                    } else {
-                        cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
-                    };
-
-                    Instance { position, rotation }
-                })
-            })
-            .collect::<Vec<_>>();
+        let origin = cgmath::Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let no_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
+        let instances = vec![Instance {
+            position: origin,
+            rotation: no_rotation,
+        }];
 
         // Reduce instance information to a single matrix for placement in buffer
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
@@ -386,6 +369,28 @@ impl State {
         let obj_model =
             resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
 
+        let colored_render_pipeline = {
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Colored Pipeline Layout"),
+                bind_group_layouts: &[&camera_bind_group_layout, &light_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+            let shader = wgpu::ShaderModuleDescriptor {
+                label: Some("Colored Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("color_shader.wgsl").into()),
+            };
+            create_render_pipeline(
+                &device,
+                &layout,
+                config.format,
+                Some(texture::Texture::DEPTH_FORMAT),
+                &[model::ColoredVertex::desc(), InstanceRaw::desc()],
+                shader,
+            )
+        };
+
+        let colored_mesh = forms::generate_sphere(&device, [0.5, 0.0, 0.5], 1.0, 32, 32);
+
         Self {
             surface,
             device,
@@ -408,6 +413,8 @@ impl State {
             light_bind_group,
             light_render_pipeline,
             mouse_pressed: false,
+            colored_render_pipeline,
+            colored_mesh,
         }
     }
 
@@ -535,14 +542,21 @@ impl State {
                 &self.light_bind_group,
             );
 
-            render_pass.set_pipeline(&self.render_pipeline);
+            // render_pass.set_pipeline(&self.render_pipeline);
+            //
+            // render_pass.draw_model_instanced(
+            //     &self.obj_model,
+            //     0..self.instances.len() as u32,
+            //     &self.camera_bind_group,
+            //     &self.light_bind_group,
+            // );
 
-            render_pass.draw_model_instanced(
-                &self.obj_model,
-                0..self.instances.len() as u32,
+            render_pass.set_pipeline(&self.colored_render_pipeline);
+            render_pass.draw_colored_mesh(
+                &self.colored_mesh,
                 &self.camera_bind_group,
                 &self.light_bind_group,
-            )
+            );
         }
 
         // Finish up the command buffer in finish(), and submit to the gpu's queue!
