@@ -221,6 +221,8 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
+        // TODO our instance information is going to dictate how we draw the ball on the screen.
+        // It will also dictate the placement of our cube which we
         let origin = cgmath::Vector3 {
             x: 0.0,
             y: 0.0,
@@ -331,6 +333,7 @@ impl State {
                 push_constant_ranges: &[],
             });
 
+        // Render pipeline for textured models
         let render_pipeline = {
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Normal Shader"),
@@ -346,6 +349,7 @@ impl State {
             )
         };
 
+        // Render pipeline for our physical light object in the scene.
         let light_render_pipeline = {
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Light Pipeline Layout"),
@@ -369,6 +373,7 @@ impl State {
         let obj_model =
             resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
 
+        // Render pipeline for colored meshes without any textures.
         let colored_render_pipeline = {
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Colored Pipeline Layout"),
