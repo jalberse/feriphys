@@ -3,7 +3,7 @@ mod forms;
 mod model;
 mod resources;
 mod texture;
-use crate::model::{DrawColoredMesh, DrawModel};
+use crate::model::DrawColoredMesh;
 
 use cgmath::prelude::*;
 use model::Vertex;
@@ -127,6 +127,7 @@ struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
+    #[allow(dead_code)]
     render_pipeline: wgpu::RenderPipeline,
     obj_model: model::Model,
     camera: camera::Camera,
@@ -135,6 +136,7 @@ struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: camera::CameraController,
+    #[allow(dead_code)]
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
@@ -387,7 +389,7 @@ impl State {
             )
         };
 
-        let colored_mesh = forms::get_hexagon(&device, [0.5, 0.0, 0.5]);
+        let colored_mesh = forms::get_cube(&device, [0.5, 0.0, 0.5]);
 
         Self {
             surface,
