@@ -394,7 +394,7 @@ impl State {
             )
         };
 
-        let colored_mesh = forms::generate_sphere(&device, [0.5, 0.0, 0.5], 1.0, 32, 32);
+        let colored_mesh = forms::get_cube_interior_normals(&device, [0.5, 0.0, 0.5]);
 
         Self {
             surface,
