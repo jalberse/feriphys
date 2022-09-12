@@ -106,6 +106,14 @@ pub fn get_cube_interior_normals(device: &wgpu::Device, color: [f32; 3]) -> mode
         6, 2, 3, 3, 7, 6, // top
     ];
 
+    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+        .iter()
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .collect();
+    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
+
     let num_indices = indices.len() as u32;
     let normals = get_normals(&vertex_positions, &indices);
     let vertices = get_colored_vertices(&vertex_positions, &normals, color);
@@ -261,6 +269,14 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         4, 5, 1, 1, 0, 4, // bottom
         3, 2, 6, 6, 7, 3, // top
     ];
+
+    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+        .iter()
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .collect();
+    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
 
     let num_indices = indices.len() as u32;
     let normals = get_normals(&vertex_positions, &indices);
