@@ -669,7 +669,21 @@ pub async fn run() {
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
-            Event::MainEventsCleared => window.request_redraw(),
+            Event::MainEventsCleared => {
+                let now = std::time::SystemTime::now();
+                let dt = now.duration_since(last_render_time).unwrap();
+                last_render_time = now;
+                state.update(dt);
+                match state.render() {
+                    Ok(_) => {}
+                    // Reconfigure the surface if it's lost or outdated
+                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => state.resize(state.size),
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                    // We're ignoring timeouts
+                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
+                }
+            }
             Event::DeviceEvent {
                 event: DeviceEvent::MouseMotion{ delta, },
                 .. // We're not using device_id currently
@@ -699,21 +713,6 @@ pub async fn run() {
                         state.resize(**new_inner_size);
                     }
                     _ => {}
-                }
-            }
-            Event::RedrawRequested(window_id) if window_id == window.id() => {
-                let now = std::time::SystemTime::now();
-                let dt = now.duration_since(last_render_time).unwrap();
-                last_render_time = now;
-                state.update(dt);
-                match state.render() {
-                    Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => state.resize(state.size),
-                    // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    // We're ignoring timeouts
-                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
                 }
             }
             _ => {}
