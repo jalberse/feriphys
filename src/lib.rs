@@ -146,7 +146,8 @@ struct State {
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
     colored_render_pipeline: wgpu::RenderPipeline,
-    colored_mesh: model::ColoredMesh,
+    bounding_box_mesh: model::ColoredMesh,
+    sphere_mesh: model::ColoredMesh,
 }
 
 impl State {
@@ -220,28 +221,6 @@ impl State {
                 ],
                 label: Some("texture_bind_group_layout"),
             });
-
-        // TODO our instance information is going to dictate how we draw the ball on the screen.
-        // It will also dictate the placement of our cube which we
-        let origin = cgmath::Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        let no_rotation =
-            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
-        let instances = vec![Instance {
-            position: origin,
-            rotation: no_rotation,
-        }];
-
-        // Reduce instance information to a single matrix for placement in buffer
-        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instance_data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
 
         let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection =
@@ -370,9 +349,6 @@ impl State {
             )
         };
 
-        let obj_model =
-            resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
-
         // Render pipeline for colored meshes without any textures.
         let colored_render_pipeline = {
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -394,7 +370,33 @@ impl State {
             )
         };
 
-        let colored_mesh = forms::get_cube_interior_normals(&device, [0.5, 0.0, 0.5]);
+        let lightbulb_model =
+            resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
+
+        let bounding_box_mesh = forms::get_cube_interior_normals(&device, [0.5, 0.0, 0.5]);
+        let sphere_mesh = forms::generate_sphere(&device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+
+        // TODO our instance information is going to dictate how we draw the ball on the screen.
+        // It will also dictate the placement of our cube which we
+        let origin = cgmath::Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let no_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
+        let instances = vec![Instance {
+            position: origin,
+            rotation: no_rotation,
+        }];
+
+        // Reduce instance information to a single matrix for placement in buffer
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
 
         Self {
             surface,
@@ -403,7 +405,7 @@ impl State {
             config,
             size,
             render_pipeline,
-            obj_model,
+            obj_model: lightbulb_model,
             camera,
             projection,
             camera_uniform,
@@ -419,7 +421,8 @@ impl State {
             light_render_pipeline,
             mouse_pressed: false,
             colored_render_pipeline,
-            colored_mesh,
+            bounding_box_mesh,
+            sphere_mesh,
         }
     }
 
@@ -547,18 +550,14 @@ impl State {
                 &self.light_bind_group,
             );
 
-            // render_pass.set_pipeline(&self.render_pipeline);
-            //
-            // render_pass.draw_model_instanced(
-            //     &self.obj_model,
-            //     0..self.instances.len() as u32,
-            //     &self.camera_bind_group,
-            //     &self.light_bind_group,
-            // );
-
             render_pass.set_pipeline(&self.colored_render_pipeline);
             render_pass.draw_colored_mesh(
-                &self.colored_mesh,
+                &self.bounding_box_mesh,
+                &self.camera_bind_group,
+                &self.light_bind_group,
+            );
+            render_pass.draw_colored_mesh(
+                &self.sphere_mesh,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );

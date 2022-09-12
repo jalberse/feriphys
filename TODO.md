@@ -1,5 +1,4 @@
 TODO:
-* Draw the cube and the ball, with the cube inside the ball.
 * Get the ball moving without any physics, move it around in a circle or something.
    We'd want to follow this loosely, I think, for the model transformation matrix: https://www.youtube.com/watch?v=9SsjhrxH08o
    Also useful: https://www.braynzarsoft.net/viewtutorial/q16390-33-instancing-with-indexed-primitives
@@ -13,13 +12,3 @@ TODO:
       since the index buffer is of a constant size we can't overflow. Though I wonder how large that can be - enough for 10k, 500k particles?)
       This also is less efficient than staging_belt, but I don't want to do that more complex implementation if not necessary.
 * Add physics in for the bouncing ball
-* (Optional) since I'm standing up this instancing framework, it might be possible to render *many* bouncing balls in their own cubes around the scene,
-  and we could fly around to them. Only if it's trivial with how I set up instancing and such. Otherwise, get extra points in other ways.
-* If I have time, change the normals of the cube functions in forms.rs so that we don't average the normals of the vertices, and instead have
-  an individual vertex for each face (i.e. 3 overallapping) with the normal for one face. Since it's such a low poly model, smooth vertex normals are
-  actually more innacurate than this method.
-  To do this, we can keep the initial vertex/index arrays defined as is (it would be a pain to define new ones by hand).
-  Then we can just loop over indices, appending to a *new* vertex position buffer with all the unique vertices (including duplicates).
-  We could also in that same loop push to an index Vec, though it would just be 0..n, so instead just use (0..n).collect() and slice that with bytemuck.
-  We can then pass those in to calculate the normals as we did before.
-  That's actually trivial, so just do it quick.
