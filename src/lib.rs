@@ -34,7 +34,7 @@ struct LightUniform {
 }
 
 struct Instance {
-    position: cgmath::Vector3<f32>,
+    pub position: cgmath::Vector3<f32>,
     rotation: cgmath::Quaternion<f32>,
     scale: f32,
 }
@@ -452,9 +452,9 @@ impl State {
             .collect::<Vec<_>>();
         let dynamic_instance_buffer =
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Instance Buffer"),
+                label: Some("Dynamic Instance Buffer"),
                 contents: bytemuck::cast_slice(&dynamic_instance_data),
-                usage: wgpu::BufferUsages::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             });
 
         Self {
@@ -551,6 +551,25 @@ impl State {
             &self.light_buffer,
             0,
             bytemuck::cast_slice(&[self.light_uniform]),
+        );
+
+        // Update the sphere position
+        self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position =
+            self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position
+                + cgmath::Vector3 {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                } * dt.as_secs_f32();
+        let new_ball_instance_data =
+            self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].to_raw();
+
+        // Note: The offset is 0 because the ball is the only instance in the dynamic instance buffer
+        // In the future, we'd have to offset by the size of raw instance data multiplied by the index.
+        self.queue.write_buffer(
+            &self.dynamic_instance_buffer,
+            0,
+            bytemuck::cast_slice(&[new_ball_instance_data]),
         );
     }
 
