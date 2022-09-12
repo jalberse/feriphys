@@ -2,6 +2,7 @@ mod camera;
 mod forms;
 mod model;
 mod resources;
+mod simulation;
 mod texture;
 use crate::model::DrawColoredMesh;
 
@@ -21,6 +22,10 @@ use winit::{
 const STATIC_INSTANCE_INDEX_LIGHT: u32 = 0;
 const STATIC_INSTANCE_INDEX_BOUNDING_BOX: u32 = 1;
 const DYNAMIC_INSTANCE_INDEX_BALL: u32 = 0;
+
+/// Simulation will step forward using this timestep.
+/// TODO: Make configurable.
+const SIMULATION_DT: std::time::Duration = std::time::Duration::from_millis(1);
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -131,6 +136,7 @@ impl CameraUniform {
 }
 
 struct State {
+    time_accumulator: std::time::Duration,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -163,6 +169,7 @@ struct State {
     colored_render_pipeline: wgpu::RenderPipeline,
     bounding_box_mesh: model::ColoredMesh,
     sphere_mesh: model::ColoredMesh,
+    simulation_state: simulation::bounce::State,
 }
 
 impl State {
@@ -457,7 +464,10 @@ impl State {
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             });
 
+        let simulation_state = simulation::bounce::State::new();
+
         Self {
+            time_accumulator: std::time::Duration::from_millis(0),
             surface,
             device,
             queue,
@@ -484,6 +494,7 @@ impl State {
             colored_render_pipeline,
             bounding_box_mesh,
             sphere_mesh,
+            simulation_state,
         }
     }
 
@@ -527,8 +538,12 @@ impl State {
         }
     }
 
-    fn update(&mut self, dt: std::time::Duration) {
-        self.camera_controller.update_camera(&mut self.camera, dt);
+    fn update(&mut self, frame_time: std::time::Duration) {
+        // Get the unsimulated time from the previous frame, so that we simulate it this time around.
+        self.time_accumulator = self.time_accumulator + frame_time;
+
+        self.camera_controller
+            .update_camera(&mut self.camera, frame_time);
         // TODO It's more efficient to have a staging buffer. Possible future improvement.
         // See https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-controller-for-our-camera
         self.camera_uniform
@@ -543,7 +558,7 @@ impl State {
         let old_position: cgmath::Vector3<_> = self.light_uniform.position.into();
         self.light_uniform.position = (cgmath::Quaternion::from_axis_angle(
             (0.0, 1.0, 0.0).into(),
-            cgmath::Deg(60.0 * dt.as_secs_f32()),
+            cgmath::Deg(60.0 * frame_time.as_secs_f32()),
         ) * old_position)
             .into();
 
@@ -553,14 +568,21 @@ impl State {
             bytemuck::cast_slice(&[self.light_uniform]),
         );
 
-        // Update the sphere position
+        // SIMULATE until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
+        while self.time_accumulator >= SIMULATION_DT {
+            // Note that our elapsed simulation time might be less than SIMULATION_DT if a collision occured.
+            // That's OK, just continue simulating the next time step from the collision next iteration.
+            let elapsed_sim_time = self.simulation_state.step(SIMULATION_DT);
+            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        }
+
+        // TODO we may want to add the last step of https://gafferongames.com/post/fix_your_timestep/
+        //   to interpolate the state if the basic accumulator implementation is jumpy.
+
+        // Update the sphere position for DISPLAY from the simulation state.
         self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position =
             self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position
-                + cgmath::Vector3 {
-                    x: 0.0,
-                    y: 1.0,
-                    z: 0.0,
-                } * dt.as_secs_f32();
+                + self.simulation_state.get_position() * frame_time.as_secs_f32();
         let new_ball_instance_data =
             self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].to_raw();
 
@@ -664,16 +686,19 @@ pub async fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
+    // Our game loop follows the famous "fix your timestep!" model:
+    // https://gafferongames.com/post/fix_your_timestep/
+    // The state holds the accumulator.
     let mut state = State::new(&window).await;
-    let mut last_render_time = std::time::SystemTime::now();
+    let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
             Event::MainEventsCleared => {
-                let now = std::time::SystemTime::now();
-                let dt = now.duration_since(last_render_time).unwrap();
-                last_render_time = now;
-                state.update(dt);
+                let new_time = std::time::SystemTime::now();
+                let frame_time = new_time.duration_since(current_time).unwrap();
+                current_time = new_time;
+                state.update(frame_time);
                 match state.render() {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
