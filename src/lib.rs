@@ -15,6 +15,13 @@ use winit::{
     window::WindowBuilder,
 };
 
+// The indices of the models in the scene in their respective instance buffers.
+// This practice should be abstracted away in the future, but since we have only 3
+// objects right now, we'll manually keep track of indices.
+const STATIC_INSTANCE_INDEX_LIGHT: u32 = 0;
+const STATIC_INSTANCE_INDEX_BOUNDING_BOX: u32 = 1;
+const DYNAMIC_INSTANCE_INDEX_BALL: u32 = 0;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightUniform {
@@ -29,12 +36,14 @@ struct LightUniform {
 struct Instance {
     position: cgmath::Vector3<f32>,
     rotation: cgmath::Quaternion<f32>,
+    scale: f32,
 }
 
 impl Instance {
     fn to_raw(&self) -> InstanceRaw {
-        let model =
-            cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation);
+        let model = cgmath::Matrix4::from_translation(self.position)
+            * cgmath::Matrix4::from(self.rotation)
+            * cgmath::Matrix4::from_scale(self.scale);
         InstanceRaw {
             model: model.into(),
             normal: cgmath::Matrix3::from(self.rotation).into(),
@@ -136,9 +145,15 @@ struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: camera::CameraController,
+    /// Models which do not require updates each frame will have their own instance buffer
     #[allow(dead_code)]
-    instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
+    static_instances: Vec<Instance>,
+    static_instance_buffer: wgpu::Buffer,
+    /// Instances which do require updates each frame (for animation, etc) will have their
+    /// instance information (i.e. transformations!) stored in their own buffer.
+    #[allow(dead_code)]
+    dynamic_instances: Vec<Instance>,
+    dynamic_instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
     light_uniform: LightUniform,
     light_buffer: wgpu::Buffer,
@@ -261,7 +276,7 @@ impl State {
         });
 
         let light_uniform = LightUniform {
-            position: [2.0, 2.0, 2.0],
+            position: [6.0, 2.0, 6.0],
             _padding: 0,
             color: [1.0, 1.0, 1.0],
             _padding2: 0,
@@ -376,27 +391,71 @@ impl State {
         let bounding_box_mesh = forms::get_cube_interior_normals(&device, [0.5, 0.0, 0.5]);
         let sphere_mesh = forms::generate_sphere(&device, [0.2, 0.8, 0.2], 1.0, 32, 32);
 
-        // TODO our instance information is going to dictate how we draw the ball on the screen.
-        // It will also dictate the placement of our cube which we
-        let origin = cgmath::Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        let no_rotation =
-            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
-        let instances = vec![Instance {
-            position: origin,
-            rotation: no_rotation,
-        }];
-
-        // Reduce instance information to a single matrix for placement in buffer
-        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        // Create the static instances and its buffer. We'll use this for the bounding box, which won't move.
+        let static_instances = vec![
+            // STATIC_INSTANCE_INDEX_LIGHT
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            },
+            // STATIC_INSTANCE_INDEX_BOUNDING_BOX
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 2.0,
+            },
+        ];
+        let static_instance_data = static_instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<_>>();
+        let static_instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instance_data),
+            contents: bytemuck::cast_slice(&static_instance_data),
             usage: wgpu::BufferUsages::VERTEX,
         });
+
+        // Create the dynamic instance buffer, which we'll update each frame with the new position for the sphere.
+        let dynamic_instances = vec![
+            // DYNAMIC_INSTANCE_INDEX_BALL
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            },
+        ];
+        let dynamic_instance_data = dynamic_instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<_>>();
+        let dynamic_instance_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(&dynamic_instance_data),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
 
         Self {
             surface,
@@ -412,8 +471,10 @@ impl State {
             camera_buffer,
             camera_bind_group,
             camera_controller,
-            instances,
-            instance_buffer,
+            static_instances,
+            static_instance_buffer,
+            dynamic_instances,
+            dynamic_instance_buffer,
             depth_texture,
             light_uniform,
             light_buffer,
@@ -540,24 +601,32 @@ impl State {
                     stencil_ops: None,
                 }),
             });
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
+            render_pass.set_vertex_buffer(1, self.static_instance_buffer.slice(..));
             use crate::model::DrawLight;
             render_pass.set_pipeline(&self.light_render_pipeline);
-            render_pass.draw_light_model(
+            render_pass.draw_light_model_instanced(
                 &self.obj_model,
+                STATIC_INSTANCE_INDEX_LIGHT..STATIC_INSTANCE_INDEX_LIGHT + 1,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );
 
             render_pass.set_pipeline(&self.colored_render_pipeline);
-            render_pass.draw_colored_mesh(
+            render_pass.draw_colored_mesh_instanced(
                 &self.bounding_box_mesh,
+                STATIC_INSTANCE_INDEX_BOUNDING_BOX..STATIC_INSTANCE_INDEX_BOUNDING_BOX + 1,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );
-            render_pass.draw_colored_mesh(
+
+            // TODO we should build a more robust system for correlating models with the instance buffer,
+            //      and their index(s) in the instance buffers. For now, since we have only 3 objects,
+            //      I'll juggle them in code.
+            render_pass.set_vertex_buffer(1, self.dynamic_instance_buffer.slice(..));
+            render_pass.draw_colored_mesh_instanced(
                 &self.sphere_mesh,
+                DYNAMIC_INSTANCE_INDEX_BALL..DYNAMIC_INSTANCE_INDEX_BALL + 1,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );

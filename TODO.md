@@ -1,5 +1,9 @@
 TODO:
 * Get the ball moving without any physics, move it around in a circle or something.
+   We'll use cgmath to get transformations as we currently are for instancing.
+   We'll update by calling queue.write_buffer() to update the instance buffer.
+   Since the cube doesn't need its instancing updated, we should hold a separate instance buffer for that.
+
    We'd want to follow this loosely, I think, for the model transformation matrix: https://www.youtube.com/watch?v=9SsjhrxH08o
    Also useful: https://www.braynzarsoft.net/viewtutorial/q16390-33-instancing-with-indexed-primitives
    We need a new transform.rs with a way to get a model transformation matrix given some position, rotation, etc.
