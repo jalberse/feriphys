@@ -23,9 +23,10 @@ const STATIC_INSTANCE_INDEX_LIGHT: u32 = 0;
 const STATIC_INSTANCE_INDEX_BOUNDING_BOX: u32 = 1;
 const DYNAMIC_INSTANCE_INDEX_BALL: u32 = 0;
 
-/// Simulation will step forward using this timestep.
-/// TODO: Make configurable.
-const SIMULATION_DT: std::time::Duration = std::time::Duration::from_millis(1);
+const SIMULATION_DT_DEFAULT: std::time::Duration = std::time::Duration::from_millis(1);
+const SIMULATION_DT_ADJUSTMENT_SIZE: std::time::Duration = std::time::Duration::from_micros(100);
+const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
+const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -170,6 +171,7 @@ struct State {
     bounding_box_mesh: model::ColoredMesh,
     sphere_mesh: model::ColoredMesh,
     simulation_state: simulation::bounce::State,
+    simulation_dt: std::time::Duration,
 }
 
 impl State {
@@ -495,6 +497,7 @@ impl State {
             bounding_box_mesh,
             sphere_mesh,
             simulation_state,
+            simulation_dt: SIMULATION_DT_DEFAULT,
         }
     }
 
@@ -521,7 +524,35 @@ impl State {
                         ..
                     },
                 ..
-            } => self.camera_controller.process_keyboard(*key, *state),
+            } => {
+                let camera_triggered = self.camera_controller.process_keyboard(*key, *state);
+                let dt_adjustment_triggered = match key {
+                    VirtualKeyCode::E => {
+                        let new_dt_maybe = self
+                            .simulation_dt
+                            .checked_add(SIMULATION_DT_ADJUSTMENT_SIZE);
+                        match new_dt_maybe {
+                            Some(dt) => self.simulation_dt = std::cmp::min(dt, SIMULATION_DT_MAX),
+                            None => self.simulation_dt = SIMULATION_DT_MAX,
+                        }
+                        println!("h: {:?}", &self.simulation_dt);
+                        true
+                    }
+                    VirtualKeyCode::Q => {
+                        let new_dt_maybe = self
+                            .simulation_dt
+                            .checked_sub(SIMULATION_DT_ADJUSTMENT_SIZE);
+                        match new_dt_maybe {
+                            Some(dt) => self.simulation_dt = std::cmp::max(dt, SIMULATION_DT_MIN),
+                            None => self.simulation_dt = SIMULATION_DT_MIN,
+                        }
+                        println!("h: {:?}", &self.simulation_dt);
+                        true
+                    }
+                    _ => false,
+                };
+                camera_triggered || dt_adjustment_triggered
+            }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.camera_controller.process_scroll(delta);
                 true
@@ -569,10 +600,10 @@ impl State {
         );
 
         // SIMULATE until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
-        while self.time_accumulator >= SIMULATION_DT {
+        while self.time_accumulator >= self.simulation_dt {
             // Note that our elapsed simulation time might be less than SIMULATION_DT if a collision occured.
             // That's OK, just continue simulating the next time step from the collision next iteration.
-            let elapsed_sim_time = self.simulation_state.step(SIMULATION_DT);
+            let elapsed_sim_time = self.simulation_state.step(self.simulation_dt);
             self.time_accumulator = self.time_accumulator - elapsed_sim_time;
         }
 

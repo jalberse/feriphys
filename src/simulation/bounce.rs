@@ -12,6 +12,7 @@
 /// * Resting contacts
 /// * Finally, add other planes for collision.
 /// * Add custom initial state stuff, so we can test collisions with other planes.
+///   I think this will be just "hit numbers 1-6" and we reset the state with some initial velocity to hit each wall.
 
 pub struct State {
     position: cgmath::Vector3<f32>,
