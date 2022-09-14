@@ -246,7 +246,7 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
-        let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
+        let camera = camera::Camera::new((0.0, 0.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let projection =
             camera::Projection::new(config.width, config.height, cgmath::Deg(45.0), 0.1, 100.0);
         let camera_controller = camera::CameraController::new(4.0, 0.4);
@@ -612,8 +612,7 @@ impl State {
 
         // Update the sphere position for DISPLAY from the simulation state.
         self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position =
-            self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position
-                + self.simulation_state.get_position() * frame_time.as_secs_f32();
+            self.simulation_state.get_position();
         let new_ball_instance_data =
             self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].to_raw();
 
