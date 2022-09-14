@@ -377,7 +377,6 @@ impl State {
         let time_elapsed;
         (self.position, self.velocity, time_elapsed) = match collided_plane_maybe {
             Some(plane) => {
-                // Take the min to avoid a negative fraction
                 let fraction_timestep = plane.distance_to(old_position)
                     / plane.distance_to(old_position)
                     - plane.distance_to(new_position);
