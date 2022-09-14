@@ -392,9 +392,7 @@ impl State {
                     old_velocity + dt.as_secs_f32() * fraction_timestep * acceleration;
 
                 // We ensure the position is slightly away from the plane to avoid floating-point
-                // precision errors that would occur if we were directly on the plane (which
-                // would include e.g. incredibly small fractional timesteps as we continuously "collide"
-                // with the plane as the ball comes to a rest).
+                // precision errors that would occur if we were directly on the plane - such as clipping through it.
                 let new_position = collision_point + plane.normal * EPSILON;
 
                 let velocity_collision_normal = velocity_collision.dot(plane.normal) * plane.normal;
@@ -425,6 +423,13 @@ impl State {
             None => (new_position, new_velocity, dt),
         };
 
+        // Cheat a little bit to ensure we stay in the bounds of the box.
+        // Floating point precision could otherwise cause us to clip through the bounds
+        // in some edge cases - fixing that would be a great improvement.
+        self.position.x = self.position.x.clamp(-0.9999, 0.9999);
+        self.position.y = self.position.y.clamp(-0.9999, 0.9999);
+        self.position.z = self.position.z.clamp(-0.9999, 0.9999);
+
         time_elapsed
     }
 
@@ -435,7 +440,7 @@ impl State {
             return false;
         }
 
-        let distance_epsilon = 0.05;
+        let distance_epsilon = 0.02;
         let contact_walls = self
             .planes
             .iter()
