@@ -3,7 +3,6 @@ use cgmath::InnerSpace;
 
 /// TODO
 /// * Resting contacts
-/// * Add horizontal motion to the ball's initial state so we can check out friciton and air resistance easier.
 /// * Make the constants in this file configurable.
 /// * Add custom initial state stuff, so we can test collisions with other planes.
 ///   I think this will be just "hit numbers 1-6" and we reset the state with some initial velocity to hit each wall.
@@ -11,9 +10,9 @@ use cgmath::InnerSpace;
 const SPHERE_MASS: f32 = 1.0;
 const DRAG: f32 = 0.5;
 const WIND: cgmath::Vector3<f32> = cgmath::Vector3 {
-    x: 0.2,
+    x: 2.0,
     y: 0.0,
-    z: 0.2,
+    z: 0.0,
 };
 const ACCELERATION_GRAVITY: f32 = -10.0;
 const COEFFICIENT_OF_RESTITUTION: f32 = 0.76;
