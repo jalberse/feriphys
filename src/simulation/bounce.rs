@@ -1,11 +1,17 @@
 /// The bounce module contains the logic for a bouncing ball simulation.
-use cgmath::InnerSpace;
+use cgmath::{InnerSpace, Zero};
 
 /// TODO
-/// * Resting contacts
 /// * Make the constants in this file configurable.
 /// * Add custom initial state stuff, so we can test collisions with other planes.
 ///   I think this will be just "hit numbers 1-6" and we reset the state with some initial velocity to hit each wall.
+/// * Since I've already got the collisions working with arbitrary planes, it might not be a big deal to just implement collisions with
+///   a polyhedron. We can generate one in crate::State::new() and pass it into the state as some "environment" param. The bounce::State::new() would
+///   take the mesh (which should really be a list of meshes), and iterate through and grab all the polygons in the mesh, storing those (with their normals, for caching reasons).
+///   The collision code would then examine that Vec of polygons, instead of its current Vec of planes, for collision.
+///   We'd use a dodecahedron since it's got a flat bottom and top, which makes the resting state simpler. Also, I think we'd still be fine
+///   with the "we're really doing point, not sphere" collision thing so long as the mesh is defined with the top and bottom at -1, 1,
+///   so long as rendering code still draws its instance scaled up by 2. The geometry should work out with that I think to appear like the sphere is the collider.
 
 const SPHERE_MASS: f32 = 1.0;
 const DRAG: f32 = 0.5;
@@ -15,8 +21,9 @@ const WIND: cgmath::Vector3<f32> = cgmath::Vector3 {
     z: 0.0,
 };
 const ACCELERATION_GRAVITY: f32 = -10.0;
-const COEFFICIENT_OF_RESTITUTION: f32 = 0.76;
+const COEFFICIENT_OF_RESTITUTION: f32 = 0.95;
 const COEFFICIENT_OF_FRICTION: f32 = 0.25;
+const STATIC_COEFFICIENT_OF_FRICTION: f32 = 0.5;
 const EPSILON: f32 = 0.001;
 
 #[derive(Debug)]
@@ -172,6 +179,10 @@ impl State {
 
         let acceleration = acceleration_air_resistance + acceleration_gravity + acceleration_wind;
 
+        if self.is_resting(acceleration) {
+            return dt;
+        }
+
         let old_position = self.position;
         let old_velocity = self.velocity;
 
@@ -185,12 +196,13 @@ impl State {
             let old_distance_to_plane = plane.distance_to(old_position);
             let new_distance_to_plane = plane.distance_to(new_position);
             // If the signs are different, the point has crossed the plane
-            (old_distance_to_plane > 0.0) != (new_distance_to_plane > 0.0)
+            old_distance_to_plane.is_sign_positive() != new_distance_to_plane.is_sign_positive()
         });
 
         let time_elapsed;
         (self.position, self.velocity, time_elapsed) = match collided_plane_maybe {
             Some(plane) => {
+                // Take the min to avoid a negative fraction
                 let fraction_timestep = plane.distance_to(old_position)
                     / plane.distance_to(old_position)
                     - plane.distance_to(new_position);
@@ -206,9 +218,8 @@ impl State {
 
                 // We ensure the position is slightly away from the plane to avoid floating-point
                 // precision errors that would occur if we were directly on the plane (which
-                // would include e.g. incredibly small timesteps as we continuously "collide"
+                // would include e.g. incredibly small fractional timesteps as we continuously "collide"
                 // with the plane as the ball comes to a rest).
-                // TODO We should add resting contacts, and when we do, this can be modified or removed.
                 let new_position = collision_point + plane.normal * EPSILON;
 
                 let velocity_collision_normal = velocity_collision.dot(plane.normal) * plane.normal;
@@ -216,12 +227,16 @@ impl State {
 
                 let velocity_response_normal =
                     -1.0 * velocity_collision_normal * COEFFICIENT_OF_RESTITUTION;
-                let velocity_response_tangent = velocity_collision_tangent
-                    - velocity_collision_tangent.normalize()
-                        * f32::min(
-                            COEFFICIENT_OF_FRICTION * velocity_collision_normal.magnitude(),
-                            velocity_collision_tangent.magnitude(),
-                        );
+                let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
+                    velocity_collision_tangent
+                } else {
+                    velocity_collision_tangent
+                        - velocity_collision_tangent.normalize()
+                            * f32::min(
+                                COEFFICIENT_OF_FRICTION * velocity_collision_normal.magnitude(),
+                                velocity_collision_tangent.magnitude(),
+                            )
+                };
 
                 let velocity_response = velocity_response_normal + velocity_response_tangent;
 
@@ -235,5 +250,57 @@ impl State {
         };
 
         time_elapsed
+    }
+
+    fn is_resting(&self, acceleration: cgmath::Vector3<f32>) -> bool {
+        let epsilon_velocity = 0.01;
+        // If the velocity is non-zero (above an allowable tolerance), we're not at rest
+        if self.velocity.magnitude() > epsilon_velocity {
+            return false;
+        }
+
+        let distance_epsilon = 0.05;
+        let contact_walls = self
+            .planes
+            .iter()
+            .filter(|&plane| -> bool { plane.distance_to(self.position) < distance_epsilon })
+            .collect::<Vec<_>>();
+
+        // If we're not touching a wall, we aren't at rest (we assume we're not in a zero-G environment)
+        if contact_walls.is_empty() {
+            return false;
+        }
+
+        // See if we're accelerating towards any of our surfaces.
+        let acceleration_epsilon = 0.00001;
+        let walls_being_accelerated_into = contact_walls
+            .iter()
+            .filter(|&&plane| -> bool { acceleration.dot(plane.normal) < acceleration_epsilon })
+            .collect::<Vec<_>>();
+
+        // If the acceleration isn't towards any of our surfaces, then we're not at rest.
+        // We may be in contact with a wall, for example, but accelerating straight down, or we may be touching a ceiling.
+        if walls_being_accelerated_into.is_empty() {
+            return false;
+        }
+
+        // To be at rest, the friction of some surface must be enough to stop
+        // the potential motion for cases where the component of the acceleration tangent
+        // to the surface is non-zero.
+        let any_wall_friction_overcomes_acceleration =
+            walls_being_accelerated_into.iter().any(|&&plane| -> bool {
+                let acceleration_normal_magnitude = plane.normal.dot(acceleration);
+                let acceleration_tangent_magnitude =
+                    (acceleration - plane.normal * acceleration_normal_magnitude).magnitude();
+                // If the acceleration is too small to overcome static friction, this wall
+                // is "grippy" enough to prevent the object from sliding.
+                acceleration_tangent_magnitude.is_nan()
+                    || acceleration_tangent_magnitude.is_zero()
+                    || acceleration_tangent_magnitude
+                        < STATIC_COEFFICIENT_OF_FRICTION * acceleration_normal_magnitude
+            });
+
+        // If any wall's static friction overcomes the other forces' acceleration, we're at rest!
+        any_wall_friction_overcomes_acceleration
     }
 }
