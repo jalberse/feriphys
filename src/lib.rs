@@ -551,7 +551,84 @@ impl State {
                     }
                     _ => false,
                 };
-                camera_triggered || dt_adjustment_triggered
+                let param_adjustment_triggered = match key {
+                    VirtualKeyCode::N => {
+                        self.simulation_state.decrease_sphere_mass();
+                        true
+                    }
+                    VirtualKeyCode::M => {
+                        self.simulation_state.increase_sphere_mass();
+                        true
+                    }
+                    VirtualKeyCode::R => {
+                        self.simulation_state.increase_gravity();
+                        true
+                    }
+                    VirtualKeyCode::F => {
+                        self.simulation_state.decrease_gravity();
+                        true
+                    }
+                    VirtualKeyCode::T => {
+                        self.simulation_state.increase_drag();
+                        true
+                    }
+                    VirtualKeyCode::G => {
+                        self.simulation_state.decrease_drag();
+                        true
+                    }
+                    VirtualKeyCode::Y => {
+                        self.simulation_state.increase_wind_x();
+                        true
+                    }
+                    VirtualKeyCode::H => {
+                        self.simulation_state.decrease_wind_x();
+                        true
+                    }
+                    VirtualKeyCode::U => {
+                        self.simulation_state.increase_wind_y();
+                        true
+                    }
+                    VirtualKeyCode::J => {
+                        self.simulation_state.decrease_wind_y();
+                        true
+                    }
+                    VirtualKeyCode::I => {
+                        self.simulation_state.increase_wind_z();
+                        true
+                    }
+                    VirtualKeyCode::K => {
+                        self.simulation_state.decrease_wind_z();
+                        true
+                    }
+                    VirtualKeyCode::O => {
+                        self.simulation_state.increase_coefficient_of_restitution();
+                        true
+                    }
+                    VirtualKeyCode::L => {
+                        self.simulation_state.decrease_coefficient_of_restitution();
+                        true
+                    }
+                    VirtualKeyCode::Z => {
+                        self.simulation_state.decrease_coefficient_of_friciton();
+                        true
+                    }
+                    VirtualKeyCode::X => {
+                        self.simulation_state.increase_coefficient_of_friction();
+                        true
+                    }
+                    VirtualKeyCode::C => {
+                        self.simulation_state
+                            .decrease_static_coefficient_of_friciton();
+                        true
+                    }
+                    VirtualKeyCode::V => {
+                        self.simulation_state
+                            .increase_static_coefficient_of_friction();
+                        true
+                    }
+                    _ => false,
+                };
+                camera_triggered || dt_adjustment_triggered || param_adjustment_triggered
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.camera_controller.process_scroll(delta);
