@@ -51,8 +51,95 @@ fn get_colored_vertices(
         .collect::<Vec<_>>()
 }
 
+#[allow(dead_code)]
+pub fn get_cube_interior_normals(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
+    let vertex_positions = vec![
+        // front
+        cgmath::Vector3 {
+            x: -1.0,
+            y: -1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: -1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: 1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: -1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: -1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: 1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: 1.0,
+            z: -1.0,
+        },
+    ];
+
+    let indices: Vec<u16> = vec![
+        2, 1, 0, 0, 3, 2, // front
+        6, 5, 1, 1, 2, 6, // right
+        5, 6, 7, 7, 4, 5, // back
+        3, 0, 4, 4, 7, 3, // left
+        1, 5, 4, 4, 0, 1, // bottom
+        6, 2, 3, 3, 7, 6, // top
+    ];
+
+    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+        .iter()
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .collect();
+    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
+
+    let num_indices = indices.len() as u32;
+    let normals = get_normals(&vertex_positions, &indices);
+    let vertices = get_colored_vertices(&vertex_positions, &normals, color);
+
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("mesh colored vertex buffer"),
+        contents: bytemuck::cast_slice(&vertices),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("mesh colored index buffer"),
+        contents: bytemuck::cast_slice(&indices),
+        usage: wgpu::BufferUsages::INDEX,
+    });
+
+    model::ColoredMesh {
+        name: "Colored Mesh".to_string(),
+        vertex_buffer,
+        index_buffer,
+        num_elements: num_indices,
+    }
+}
+
 /// Generates a sphere mesh with the specified color, radius, and number of sectors and stacks.
 /// The vertices have their normals averaged across adjacent faces.
+#[allow(dead_code)]
 pub fn generate_sphere(
     device: &wgpu::Device,
     color: [f32; 3],
@@ -182,6 +269,14 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         4, 5, 1, 1, 0, 4, // bottom
         3, 2, 6, 6, 7, 3, // top
     ];
+
+    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+        .iter()
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .collect();
+    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
 
     let num_indices = indices.len() as u32;
     let normals = get_normals(&vertex_positions, &indices);

@@ -2,6 +2,7 @@ mod camera;
 mod forms;
 mod model;
 mod resources;
+mod simulation;
 mod texture;
 use crate::model::DrawColoredMesh;
 
@@ -15,6 +16,18 @@ use winit::{
     window::WindowBuilder,
 };
 
+// The indices of the models in the scene in their respective instance buffers.
+// This practice should be abstracted away in the future, but since we have only 3
+// objects right now, we'll manually keep track of indices.
+const STATIC_INSTANCE_INDEX_LIGHT: u32 = 0;
+const STATIC_INSTANCE_INDEX_BOUNDING_BOX: u32 = 1;
+const DYNAMIC_INSTANCE_INDEX_BALL: u32 = 0;
+
+const SIMULATION_DT_DEFAULT: std::time::Duration = std::time::Duration::from_millis(1);
+const SIMULATION_DT_ADJUSTMENT_SIZE: std::time::Duration = std::time::Duration::from_micros(100);
+const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
+const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightUniform {
@@ -27,14 +40,16 @@ struct LightUniform {
 }
 
 struct Instance {
-    position: cgmath::Vector3<f32>,
+    pub position: cgmath::Vector3<f32>,
     rotation: cgmath::Quaternion<f32>,
+    scale: f32,
 }
 
 impl Instance {
     fn to_raw(&self) -> InstanceRaw {
-        let model =
-            cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation);
+        let model = cgmath::Matrix4::from_translation(self.position)
+            * cgmath::Matrix4::from(self.rotation)
+            * cgmath::Matrix4::from_scale(self.scale);
         InstanceRaw {
             model: model.into(),
             normal: cgmath::Matrix3::from(self.rotation).into(),
@@ -122,6 +137,7 @@ impl CameraUniform {
 }
 
 struct State {
+    time_accumulator: std::time::Duration,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -136,9 +152,15 @@ struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: camera::CameraController,
+    /// Models which do not require updates each frame will have their own instance buffer
     #[allow(dead_code)]
-    instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
+    static_instances: Vec<Instance>,
+    static_instance_buffer: wgpu::Buffer,
+    /// Instances which do require updates each frame (for animation, etc) will have their
+    /// instance information (i.e. transformations!) stored in their own buffer.
+    #[allow(dead_code)]
+    dynamic_instances: Vec<Instance>,
+    dynamic_instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
     light_uniform: LightUniform,
     light_buffer: wgpu::Buffer,
@@ -146,7 +168,10 @@ struct State {
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
     colored_render_pipeline: wgpu::RenderPipeline,
-    colored_mesh: model::ColoredMesh,
+    bounding_box_mesh: model::ColoredMesh,
+    sphere_mesh: model::ColoredMesh,
+    simulation_state: simulation::bounce::State,
+    simulation_dt: std::time::Duration,
 }
 
 impl State {
@@ -221,27 +246,7 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
-        let origin = cgmath::Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        let no_rotation =
-            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
-        let instances = vec![Instance {
-            position: origin,
-            rotation: no_rotation,
-        }];
-
-        // Reduce instance information to a single matrix for placement in buffer
-        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instance_data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
+        let camera = camera::Camera::new((0.0, 0.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let projection =
             camera::Projection::new(config.width, config.height, cgmath::Deg(45.0), 0.1, 100.0);
         let camera_controller = camera::CameraController::new(4.0, 0.4);
@@ -280,7 +285,7 @@ impl State {
         });
 
         let light_uniform = LightUniform {
-            position: [2.0, 2.0, 2.0],
+            position: [6.0, 2.0, 6.0],
             _padding: 0,
             color: [1.0, 1.0, 1.0],
             _padding2: 0,
@@ -331,6 +336,7 @@ impl State {
                 push_constant_ranges: &[],
             });
 
+        // Render pipeline for textured models
         let render_pipeline = {
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Normal Shader"),
@@ -346,6 +352,7 @@ impl State {
             )
         };
 
+        // Render pipeline for our physical light object in the scene.
         let light_render_pipeline = {
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Light Pipeline Layout"),
@@ -366,9 +373,7 @@ impl State {
             )
         };
 
-        let obj_model =
-            resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
-
+        // Render pipeline for colored meshes without any textures.
         let colored_render_pipeline = {
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Colored Pipeline Layout"),
@@ -389,24 +394,99 @@ impl State {
             )
         };
 
-        let colored_mesh = forms::generate_sphere(&device, [0.5, 0.0, 0.5], 1.0, 32, 32);
+        let lightbulb_model =
+            resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout).unwrap();
+
+        let bounding_box_mesh = forms::get_cube_interior_normals(&device, [0.5, 0.0, 0.5]);
+        let sphere_mesh = forms::generate_sphere(&device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+
+        // Create the static instances and its buffer. We'll use this for the bounding box, which won't move.
+        let static_instances = vec![
+            // STATIC_INSTANCE_INDEX_LIGHT
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            },
+            // STATIC_INSTANCE_INDEX_BOUNDING_BOX
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 2.0,
+            },
+        ];
+        let static_instance_data = static_instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<_>>();
+        let static_instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&static_instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        // Create the dynamic instance buffer, which we'll update each frame with the new position for the sphere.
+        let dynamic_instances = vec![
+            // DYNAMIC_INSTANCE_INDEX_BALL
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            },
+        ];
+        let dynamic_instance_data = dynamic_instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<_>>();
+        let dynamic_instance_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Dynamic Instance Buffer"),
+                contents: bytemuck::cast_slice(&dynamic_instance_data),
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            });
+
+        let simulation_state = simulation::bounce::State::new();
 
         Self {
+            time_accumulator: std::time::Duration::from_millis(0),
             surface,
             device,
             queue,
             config,
             size,
             render_pipeline,
-            obj_model,
+            obj_model: lightbulb_model,
             camera,
             projection,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
             camera_controller,
-            instances,
-            instance_buffer,
+            static_instances,
+            static_instance_buffer,
+            dynamic_instances,
+            dynamic_instance_buffer,
             depth_texture,
             light_uniform,
             light_buffer,
@@ -414,7 +494,10 @@ impl State {
             light_render_pipeline,
             mouse_pressed: false,
             colored_render_pipeline,
-            colored_mesh,
+            bounding_box_mesh,
+            sphere_mesh,
+            simulation_state,
+            simulation_dt: SIMULATION_DT_DEFAULT,
         }
     }
 
@@ -441,7 +524,112 @@ impl State {
                         ..
                     },
                 ..
-            } => self.camera_controller.process_keyboard(*key, *state),
+            } => {
+                let camera_triggered = self.camera_controller.process_keyboard(*key, *state);
+                let dt_adjustment_triggered = match key {
+                    VirtualKeyCode::E => {
+                        let new_dt_maybe = self
+                            .simulation_dt
+                            .checked_add(SIMULATION_DT_ADJUSTMENT_SIZE);
+                        match new_dt_maybe {
+                            Some(dt) => self.simulation_dt = std::cmp::min(dt, SIMULATION_DT_MAX),
+                            None => self.simulation_dt = SIMULATION_DT_MAX,
+                        }
+                        println!("h: {:?}", &self.simulation_dt);
+                        true
+                    }
+                    VirtualKeyCode::Q => {
+                        let new_dt_maybe = self
+                            .simulation_dt
+                            .checked_sub(SIMULATION_DT_ADJUSTMENT_SIZE);
+                        match new_dt_maybe {
+                            Some(dt) => self.simulation_dt = std::cmp::max(dt, SIMULATION_DT_MIN),
+                            None => self.simulation_dt = SIMULATION_DT_MIN,
+                        }
+                        println!("h: {:?}", &self.simulation_dt);
+                        true
+                    }
+                    _ => false,
+                };
+                let param_adjustment_triggered = match key {
+                    VirtualKeyCode::N => {
+                        self.simulation_state.decrease_sphere_mass();
+                        true
+                    }
+                    VirtualKeyCode::M => {
+                        self.simulation_state.increase_sphere_mass();
+                        true
+                    }
+                    VirtualKeyCode::R => {
+                        self.simulation_state.increase_gravity();
+                        true
+                    }
+                    VirtualKeyCode::F => {
+                        self.simulation_state.decrease_gravity();
+                        true
+                    }
+                    VirtualKeyCode::T => {
+                        self.simulation_state.increase_drag();
+                        true
+                    }
+                    VirtualKeyCode::G => {
+                        self.simulation_state.decrease_drag();
+                        true
+                    }
+                    VirtualKeyCode::Y => {
+                        self.simulation_state.increase_wind_x();
+                        true
+                    }
+                    VirtualKeyCode::H => {
+                        self.simulation_state.decrease_wind_x();
+                        true
+                    }
+                    VirtualKeyCode::U => {
+                        self.simulation_state.increase_wind_y();
+                        true
+                    }
+                    VirtualKeyCode::J => {
+                        self.simulation_state.decrease_wind_y();
+                        true
+                    }
+                    VirtualKeyCode::I => {
+                        self.simulation_state.increase_wind_z();
+                        true
+                    }
+                    VirtualKeyCode::K => {
+                        self.simulation_state.decrease_wind_z();
+                        true
+                    }
+                    VirtualKeyCode::O => {
+                        self.simulation_state.increase_coefficient_of_restitution();
+                        true
+                    }
+                    VirtualKeyCode::L => {
+                        self.simulation_state.decrease_coefficient_of_restitution();
+                        true
+                    }
+                    VirtualKeyCode::Z => {
+                        self.simulation_state.decrease_coefficient_of_friciton();
+                        true
+                    }
+                    VirtualKeyCode::X => {
+                        self.simulation_state.increase_coefficient_of_friction();
+                        true
+                    }
+                    VirtualKeyCode::C => {
+                        self.simulation_state
+                            .decrease_static_coefficient_of_friciton();
+                        true
+                    }
+                    VirtualKeyCode::V => {
+                        self.simulation_state
+                            .increase_static_coefficient_of_friction();
+                        true
+                    }
+                    _ => false,
+                };
+                camera_triggered || dt_adjustment_triggered || param_adjustment_triggered
+            }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.camera_controller.process_scroll(delta);
                 true
@@ -458,8 +646,12 @@ impl State {
         }
     }
 
-    fn update(&mut self, dt: std::time::Duration) {
-        self.camera_controller.update_camera(&mut self.camera, dt);
+    fn update(&mut self, frame_time: std::time::Duration) {
+        // Get the unsimulated time from the previous frame, so that we simulate it this time around.
+        self.time_accumulator = self.time_accumulator + frame_time;
+
+        self.camera_controller
+            .update_camera(&mut self.camera, frame_time);
         // TODO It's more efficient to have a staging buffer. Possible future improvement.
         // See https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-controller-for-our-camera
         self.camera_uniform
@@ -474,7 +666,7 @@ impl State {
         let old_position: cgmath::Vector3<_> = self.light_uniform.position.into();
         self.light_uniform.position = (cgmath::Quaternion::from_axis_angle(
             (0.0, 1.0, 0.0).into(),
-            cgmath::Deg(60.0 * dt.as_secs_f32()),
+            cgmath::Deg(60.0 * frame_time.as_secs_f32()),
         ) * old_position)
             .into();
 
@@ -482,6 +674,31 @@ impl State {
             &self.light_buffer,
             0,
             bytemuck::cast_slice(&[self.light_uniform]),
+        );
+
+        // SIMULATE until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
+        while self.time_accumulator >= self.simulation_dt {
+            // Note that our elapsed simulation time might be less than SIMULATION_DT if a collision occured.
+            // That's OK, just continue simulating the next time step from the collision next iteration.
+            let elapsed_sim_time = self.simulation_state.step(self.simulation_dt);
+            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        }
+
+        // TODO we may want to add the last step of https://gafferongames.com/post/fix_your_timestep/
+        //   to interpolate the state if the basic accumulator implementation is jumpy.
+
+        // Update the sphere position for DISPLAY from the simulation state.
+        self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].position =
+            self.simulation_state.get_position();
+        let new_ball_instance_data =
+            self.dynamic_instances[DYNAMIC_INSTANCE_INDEX_BALL as usize].to_raw();
+
+        // Note: The offset is 0 because the ball is the only instance in the dynamic instance buffer
+        // In the future, we'd have to offset by the size of raw instance data multiplied by the index.
+        self.queue.write_buffer(
+            &self.dynamic_instance_buffer,
+            0,
+            bytemuck::cast_slice(&[new_ball_instance_data]),
         );
     }
 
@@ -532,28 +749,32 @@ impl State {
                     stencil_ops: None,
                 }),
             });
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
+            render_pass.set_vertex_buffer(1, self.static_instance_buffer.slice(..));
             use crate::model::DrawLight;
             render_pass.set_pipeline(&self.light_render_pipeline);
-            render_pass.draw_light_model(
+            render_pass.draw_light_model_instanced(
                 &self.obj_model,
+                STATIC_INSTANCE_INDEX_LIGHT..STATIC_INSTANCE_INDEX_LIGHT + 1,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );
 
-            // render_pass.set_pipeline(&self.render_pipeline);
-            //
-            // render_pass.draw_model_instanced(
-            //     &self.obj_model,
-            //     0..self.instances.len() as u32,
-            //     &self.camera_bind_group,
-            //     &self.light_bind_group,
-            // );
-
             render_pass.set_pipeline(&self.colored_render_pipeline);
-            render_pass.draw_colored_mesh(
-                &self.colored_mesh,
+            render_pass.draw_colored_mesh_instanced(
+                &self.bounding_box_mesh,
+                STATIC_INSTANCE_INDEX_BOUNDING_BOX..STATIC_INSTANCE_INDEX_BOUNDING_BOX + 1,
+                &self.camera_bind_group,
+                &self.light_bind_group,
+            );
+
+            // TODO we should build a more robust system for correlating models with the instance buffer,
+            //      and their index(s) in the instance buffers. For now, since we have only 3 objects,
+            //      I'll juggle them in code.
+            render_pass.set_vertex_buffer(1, self.dynamic_instance_buffer.slice(..));
+            render_pass.draw_colored_mesh_instanced(
+                &self.sphere_mesh,
+                DYNAMIC_INSTANCE_INDEX_BALL..DYNAMIC_INSTANCE_INDEX_BALL + 1,
                 &self.camera_bind_group,
                 &self.light_bind_group,
             );
@@ -572,12 +793,29 @@ pub async fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
+    // Our game loop follows the famous "fix your timestep!" model:
+    // https://gafferongames.com/post/fix_your_timestep/
+    // The state holds the accumulator.
     let mut state = State::new(&window).await;
-    let mut last_render_time = std::time::SystemTime::now();
+    let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
-            Event::MainEventsCleared => window.request_redraw(),
+            Event::MainEventsCleared => {
+                let new_time = std::time::SystemTime::now();
+                let frame_time = new_time.duration_since(current_time).unwrap();
+                current_time = new_time;
+                state.update(frame_time);
+                match state.render() {
+                    Ok(_) => {}
+                    // Reconfigure the surface if it's lost or outdated
+                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => state.resize(state.size),
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                    // We're ignoring timeouts
+                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
+                }
+            }
             Event::DeviceEvent {
                 event: DeviceEvent::MouseMotion{ delta, },
                 .. // We're not using device_id currently
@@ -607,21 +845,6 @@ pub async fn run() {
                         state.resize(**new_inner_size);
                     }
                     _ => {}
-                }
-            }
-            Event::RedrawRequested(window_id) if window_id == window.id() => {
-                let now = std::time::SystemTime::now();
-                let dt = now.duration_since(last_render_time).unwrap();
-                last_render_time = now;
-                state.update(dt);
-                match state.render() {
-                    Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => state.resize(state.size),
-                    // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    // We're ignoring timeouts
-                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
                 }
             }
             _ => {}
