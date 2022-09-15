@@ -162,8 +162,6 @@ struct State {
     dynamic_instances: Vec<Instance>,
     dynamic_instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
-    light_uniform: LightUniform,
-    light_buffer: wgpu::Buffer,
     light_bind_group: wgpu::BindGroup,
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
@@ -488,8 +486,6 @@ impl State {
             dynamic_instances,
             dynamic_instance_buffer,
             depth_texture,
-            light_uniform,
-            light_buffer,
             light_bind_group,
             light_render_pipeline,
             mouse_pressed: false,
@@ -660,20 +656,6 @@ impl State {
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
-        );
-
-        // Update the light position
-        let old_position: cgmath::Vector3<_> = self.light_uniform.position.into();
-        self.light_uniform.position = (cgmath::Quaternion::from_axis_angle(
-            (0.0, 1.0, 0.0).into(),
-            cgmath::Deg(60.0 * frame_time.as_secs_f32()),
-        ) * old_position)
-            .into();
-
-        self.queue.write_buffer(
-            &self.light_buffer,
-            0,
-            bytemuck::cast_slice(&[self.light_uniform]),
         );
 
         // SIMULATE until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
