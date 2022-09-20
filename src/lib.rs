@@ -5,6 +5,7 @@ mod resources;
 mod simulation;
 mod texture;
 use crate::model::DrawColoredMesh;
+mod gui;
 
 use cgmath::prelude::*;
 use model::Vertex;
@@ -684,10 +685,7 @@ impl State {
         );
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        // We'll render to this
-        let output = self.surface.get_current_texture()?;
-
+    fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -763,10 +761,7 @@ impl State {
         }
 
         // Finish up the command buffer in finish(), and submit to the gpu's queue!
-        self.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
-
-        Ok(())
+        encoder.finish()
     }
 }
 
@@ -779,8 +774,13 @@ pub async fn run() {
     // https://gafferongames.com/post/fix_your_timestep/
     // The state holds the accumulator.
     let mut state = State::new(&window).await;
+
+    let mut gui = gui::Gui::new(&state.device, &state.config, &window);
+
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
+        gui.handle_events(&event);
+
         *control_flow = ControlFlow::Poll;
         match event {
             Event::MainEventsCleared => {
@@ -788,15 +788,12 @@ pub async fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                match state.render() {
-                    Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => state.resize(state.size),
-                    // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    // We're ignoring timeouts
-                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
-                }
+                let output = state.surface.get_current_texture().unwrap();
+                let simulation_render_command_buffer = state.render(&output);
+                let gui_render_command_buffer = gui.render(frame_time, &state.device, &state.config, &state.queue, &window, &output);
+
+                state.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
+                output.present();
             }
             Event::DeviceEvent {
                 event: DeviceEvent::MouseMotion{ delta, },
