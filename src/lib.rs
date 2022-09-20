@@ -173,7 +173,7 @@ struct State {
 
 impl State {
     // Creating some of the wgpu types requires async types
-    async fn new(window: &Window) -> Self {
+    fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
 
         let texture_bind_group_layout =
@@ -746,7 +746,7 @@ impl State {
     }
 }
 
-pub async fn run() {
+pub fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -754,7 +754,7 @@ pub async fn run() {
     // Our game loop follows the famous "fix your timestep!" model:
     // https://gafferongames.com/post/fix_your_timestep/
     // The state holds the accumulator.
-    let mut state = State::new(&window).await;
+    let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
 
