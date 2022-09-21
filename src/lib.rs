@@ -9,6 +9,7 @@ mod gpu_interface;
 mod gui;
 mod instance;
 
+use camera::CameraUniform;
 use cgmath::prelude::*;
 use gpu_interface::GPUInterface;
 use instance::{Instance, InstanceRaw};
@@ -44,31 +45,6 @@ struct LightUniform {
     _padding2: u32,
 }
 
-/// This is a uniform to store the camera's view projection matrix for
-/// the vertex shader.
-/// A uniform is a blob of data that's available for a set of shaders.
-/// We derive bytemuck::Pod and Zeroable so that it can be stored in a buffer.
-#[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct CameraUniform {
-    view_position: [f32; 4],
-    view_proj: [[f32; 4]; 4],
-}
-
-impl CameraUniform {
-    fn new() -> Self {
-        Self {
-            view_position: [0.0; 4],
-            view_proj: cgmath::Matrix4::identity().into(),
-        }
-    }
-
-    fn update_view_proj(&mut self, camera: &camera::Camera, projection: &camera::Projection) {
-        self.view_position = camera.position.to_homogeneous().into();
-        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into();
-    }
-}
-
 struct State {
     gpu: GPUInterface,
     time_accumulator: std::time::Duration,
@@ -77,7 +53,7 @@ struct State {
     obj_model: model::Model,
     camera: camera::Camera,
     projection: camera::Projection,
-    camera_uniform: CameraUniform,
+    camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: camera::CameraController,

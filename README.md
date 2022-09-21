@@ -19,12 +19,8 @@ It would have render() and handle_events(), both of which would have default imp
     (besdies a different GuiWindow field, but that could be passed in or use different type that implement a GuiWindow trait or something)
 Then they could each implement their own get_simulation_state_mut() and each simulation would implement a sync_state_from_gui().
 
-Clean up lib.rs - cluttered. Move some stuff into their own modules or existing modules as appropriate.
-Consider what can be re-used.
-
-Then, squirel away the current lib.rs into some new BouncingBallSim.rs file (top level) which holds its own event
-loop and stuff.
+Then, squirel away the current lib.rs into some new bouncing ball simulation. Maybe its own module, since it's a different "app" in some ways.
 Change the current lib.rs to open that based on some command line argument.
-Add a new ParticlesSim.rs (or something) to start our particle sim.
+Add a new ParticlesSim.rs (or something, maybe instead some particle_sim/mod.rs) to start our particle sim.
 Begin development on ParticlesSim.rs. Anything that *can* be abstracted out of BouncingBallSim.rs
 to be shared, should be, if it's easy.
