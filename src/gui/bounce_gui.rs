@@ -11,6 +11,14 @@ impl Ui for BouncingBallUi {
         egui::Window::new("Config").show(&ctx, |ui| {
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.dt,
+                    BouncingBallUi::SIMULATION_DT_MIN.as_secs_f32()
+                        ..=BouncingBallUi::SIMULATION_DT_MAX.as_secs_f32(),
+                )
+                .text("Simualtion dt (secs)"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.acceleration_gravity,
                     BouncingBallUi::ACCELERATION_GRAVITY_MIN
                         ..=BouncingBallUi::ACCELERATION_GRAVITY_MAX,
@@ -81,6 +89,9 @@ impl Ui for BouncingBallUi {
 }
 
 impl BouncingBallUi {
+    const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
+    const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
+
     const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
     const ACCELERATION_GRAVITY_MAX: f32 = 20.0;
 

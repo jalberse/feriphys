@@ -5,6 +5,7 @@ use cgmath::{InnerSpace, Zero};
 const EPSILON: f32 = 0.001;
 
 pub struct Config {
+    pub dt: f32, // secs as f32
     pub sphere_mass: f32,
     pub drag: f32,
     pub wind: cgmath::Vector3<f32>,
@@ -17,6 +18,7 @@ pub struct Config {
 impl Config {
     pub fn default() -> Self {
         Self {
+            dt: std::time::Duration::from_millis(1).as_secs_f32(),
             sphere_mass: 1.0,
             drag: 0.5,
             wind: cgmath::Vector3 {
@@ -54,7 +56,7 @@ impl Plane {
 
 pub struct State {
     planes: Vec<Plane>,
-    config: Config,
+    pub config: Config,
     position: cgmath::Vector3<f32>,
     velocity: cgmath::Vector3<f32>,
 }
@@ -166,12 +168,16 @@ impl State {
         self.position
     }
 
-    /// Advance the simulation by dt. Uses first order Euler integration.
+    pub fn get_timestep(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f32(self.config.dt)
+    }
+
+    /// Advance the simulation by config.dt. Uses first order Euler integration.
     /// If the full timestep wouuld result in a collision before dt,
     /// advances only until the moment after the collision.
     /// Returns the time the simulation has advanced.
     /// That is, dt if no collision has occured, or some duration <= dt if a collision did occur.
-    pub fn step(&mut self, dt: std::time::Duration) -> std::time::Duration {
+    pub fn step(&mut self) -> std::time::Duration {
         // Determine the acceleration due to the forces acting on the sphere.
         let acceleration_gravity = cgmath::Vector3 {
             x: 0.0,
@@ -192,15 +198,15 @@ impl State {
         let acceleration = acceleration_air_resistance + acceleration_gravity + acceleration_wind;
 
         if self.is_resting(acceleration) {
-            return dt;
+            return self.get_timestep();
         }
 
         let old_position = self.position;
         let old_velocity = self.velocity;
 
         // Numerically integrate to get thew new state, updating the state.
-        let new_position = old_position + dt.as_secs_f32() * old_velocity;
-        let new_velocity = old_velocity + dt.as_secs_f32() * acceleration;
+        let new_position = old_position + self.config.dt * old_velocity;
+        let new_velocity = old_velocity + self.config.dt * acceleration;
 
         // TODO note that technically, you can collide with two planes at the same time.
         //      That case really *should* be handled.
@@ -222,10 +228,10 @@ impl State {
                 // we need to integrate to find the position at that fraction of a timestep.
                 // This assumes that the path is linear.
                 let collision_point =
-                    old_position + dt.as_secs_f32() * fraction_timestep * old_velocity;
+                    old_position + self.config.dt * fraction_timestep * old_velocity;
                 // The velocity the moment before the collision
                 let velocity_collision =
-                    old_velocity + dt.as_secs_f32() * fraction_timestep * acceleration;
+                    old_velocity + self.config.dt * fraction_timestep * acceleration;
 
                 // We ensure the position is slightly away from the plane to avoid floating-point
                 // precision errors that would occur if we were directly on the plane - such as clipping through it.
@@ -253,10 +259,10 @@ impl State {
                 (
                     new_position,
                     velocity_response,
-                    std::time::Duration::from_secs_f32(dt.as_secs_f32() * fraction_timestep),
+                    std::time::Duration::from_secs_f32(self.config.dt * fraction_timestep),
                 )
             }
-            None => (new_position, new_velocity, dt),
+            None => (new_position, new_velocity, self.get_timestep()),
         };
 
         // Cheat a little bit to ensure we stay in the bounds of the box.
@@ -323,6 +329,7 @@ impl State {
 
     pub fn sync_state_from_ui(&mut self, ui: &mut bounce_gui::BouncingBallUi) {
         let ui_config_state = ui.get_gui_state_mut();
+        self.config.dt = ui_config_state.dt;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.sphere_mass = ui_config_state.sphere_mass;
         self.config.drag = ui_config_state.drag;
