@@ -7,9 +7,11 @@ mod texture;
 use crate::model::DrawColoredMesh;
 mod gpu_interface;
 mod gui;
+mod instance;
 
 use cgmath::prelude::*;
 use gpu_interface::GPUInterface;
+use instance::{Instance, InstanceRaw};
 use model::Vertex;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -40,78 +42,6 @@ struct LightUniform {
     color: [f32; 3],
     // Due to uniforms requiring 16 byte (4 float) spacing, we need to use a padding field here
     _padding2: u32,
-}
-
-struct Instance {
-    pub position: cgmath::Vector3<f32>,
-    rotation: cgmath::Quaternion<f32>,
-    scale: f32,
-}
-
-impl Instance {
-    fn to_raw(&self) -> InstanceRaw {
-        let model = cgmath::Matrix4::from_translation(self.position)
-            * cgmath::Matrix4::from(self.rotation)
-            * cgmath::Matrix4::from_scale(self.scale);
-        InstanceRaw {
-            model: model.into(),
-            normal: cgmath::Matrix3::from(self.rotation).into(),
-        }
-    }
-}
-
-/// Reduced matrix from an Instance to be placed in the buffer for shaders.
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct InstanceRaw {
-    model: [[f32; 4]; 4],
-    normal: [[f32; 3]; 3],
-}
-impl model::Vertex for InstanceRaw {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        use std::mem;
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 5,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
-                    shader_location: 6,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
-                    shader_location: 7,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
-                    shader_location: 8,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
-                    shader_location: 9,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 19]>() as wgpu::BufferAddress,
-                    shader_location: 10,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 22]>() as wgpu::BufferAddress,
-                    shader_location: 11,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-            ],
-        }
-    }
 }
 
 /// This is a uniform to store the camera's view projection matrix for
@@ -313,7 +243,7 @@ impl State {
                 &render_pipeline_layout,
                 gpu.config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ModelVertex::desc(), InstanceRaw::desc()],
+                &[model::ModelVertex::desc(), InstanceRaw::desc::<5>()],
                 shader,
             )
         };
@@ -359,7 +289,7 @@ impl State {
                 &layout,
                 gpu.config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ColoredVertex::desc(), InstanceRaw::desc()],
+                &[model::ColoredVertex::desc(), InstanceRaw::desc::<5>()],
                 shader,
             )
         };
