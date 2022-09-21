@@ -1,46 +1,35 @@
+use crate::gui::bounce_gui;
 /// The bounce module contains the logic for a bouncing ball simulation.
 use cgmath::{InnerSpace, Zero};
 
 const EPSILON: f32 = 0.001;
 
-struct Config {
-    sphere_mass: f32,
-    drag: f32,
-    wind: cgmath::Vector3<f32>,
-    acceleration_gravity: f32,
-    coefficient_of_restitution: f32,
-    coefficient_of_friction: f32,
-    static_coefficient_of_friction: f32,
+pub struct Config {
+    pub sphere_mass: f32,
+    pub drag: f32,
+    pub wind: cgmath::Vector3<f32>,
+    pub acceleration_gravity: f32,
+    pub coefficient_of_restitution: f32,
+    pub coefficient_of_friction: f32,
+    pub static_coefficient_of_friction: f32,
 }
 
 impl Config {
-    const MIN_SPHERE_MASS: f32 = 0.05;
-    const MAX_SPHERE_MASS: f32 = 10.0;
-    const SPHERE_MASS_STEP: f32 = 0.5;
-
-    const MIN_DRAG: f32 = 0.05;
-    const MAX_DRAG: f32 = 2.0;
-    const DRAG_STEP: f32 = 0.05;
-
-    const MIN_WIND: f32 = -5.0;
-    const MAX_WIND: f32 = 5.0;
-    const WIND_STEP: f32 = 0.1;
-
-    const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
-    const ACCELERATION_GRAVITY_MAX: f32 = 20.0;
-    const ACCELERATION_GRAVITY_STEP: f32 = 0.1;
-
-    const COEFFICIENT_OF_RESTITUTION_MIN: f32 = 0.0;
-    const COEFFICIENT_OF_RESTITUTION_MAX: f32 = 1.0;
-    const COEFFICIENT_OF_RESTITUTION_STEP: f32 = 0.05;
-
-    const COEFFICIENT_OF_FRICTION_MIN: f32 = 0.05;
-    const COEFFICIENT_OF_FRICTION_MAX: f32 = 1.0;
-    const COEFFICIENT_OF_FRICTION_STEP: f32 = 0.05;
-
-    const STATIC_COEFFICIENT_OF_FRICTION_MIN: f32 = 0.05;
-    const STATIC_COEFFICIENT_OF_FRICTION_MAX: f32 = 1.0;
-    const STATIC_COEFFICIENT_OF_FRICTION_STEP: f32 = 0.05;
+    pub fn default() -> Self {
+        Self {
+            sphere_mass: 1.0,
+            drag: 0.5,
+            wind: cgmath::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            acceleration_gravity: -10.0,
+            coefficient_of_restitution: 0.95,
+            coefficient_of_friction: 0.25,
+            static_coefficient_of_friction: 0.5,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -153,19 +142,7 @@ impl State {
             ),
         ];
 
-        let config = Config {
-            sphere_mass: 1.0,
-            drag: 0.5,
-            wind: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            acceleration_gravity: -10.0,
-            coefficient_of_restitution: 0.95,
-            coefficient_of_friction: 0.25,
-            static_coefficient_of_friction: 0.5,
-        };
+        let config = Config::default();
 
         let position = cgmath::Vector3 {
             x: 0.0,
@@ -183,146 +160,6 @@ impl State {
             position,
             velocity,
         }
-    }
-
-    pub fn increase_sphere_mass(&mut self) {
-        self.config.sphere_mass = f32::min(
-            self.config.sphere_mass + Config::SPHERE_MASS_STEP,
-            Config::MAX_SPHERE_MASS,
-        );
-        println!("Sphere mass: {}", self.config.sphere_mass);
-    }
-
-    pub fn decrease_sphere_mass(&mut self) {
-        self.config.sphere_mass = f32::max(
-            self.config.sphere_mass - Config::SPHERE_MASS_STEP,
-            Config::MIN_SPHERE_MASS,
-        );
-        println!("Sphere mass: {}", self.config.sphere_mass);
-    }
-
-    pub fn increase_drag(&mut self) {
-        self.config.drag = f32::min(self.config.drag + Config::DRAG_STEP, Config::MAX_DRAG);
-        println!("Drag: {}", self.config.drag);
-    }
-
-    pub fn decrease_drag(&mut self) {
-        self.config.drag = f32::max(self.config.drag - Config::DRAG_STEP, Config::MIN_DRAG);
-        println!("Drag: {}", self.config.drag);
-    }
-
-    pub fn increase_wind_x(&mut self) {
-        self.config.wind.x = f32::min(self.config.wind.x + Config::WIND_STEP, Config::MAX_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn decrease_wind_x(&mut self) {
-        self.config.wind.x = f32::max(self.config.wind.x - Config::WIND_STEP, Config::MIN_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn increase_wind_y(&mut self) {
-        self.config.wind.y = f32::min(self.config.wind.y + Config::WIND_STEP, Config::MAX_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn decrease_wind_y(&mut self) {
-        self.config.wind.y = f32::max(self.config.wind.y - Config::WIND_STEP, Config::MIN_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn increase_wind_z(&mut self) {
-        self.config.wind.z = f32::min(self.config.wind.z + Config::WIND_STEP, Config::MAX_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn decrease_wind_z(&mut self) {
-        self.config.wind.z = f32::max(self.config.wind.z - Config::WIND_STEP, Config::MIN_WIND);
-        println!("Wind: {:?}", self.config.wind);
-    }
-
-    pub fn increase_gravity(&mut self) {
-        self.config.acceleration_gravity = f32::min(
-            self.config.acceleration_gravity + Config::ACCELERATION_GRAVITY_STEP,
-            Config::ACCELERATION_GRAVITY_MAX,
-        );
-        println!("Gravity: {}", self.config.acceleration_gravity);
-    }
-
-    pub fn decrease_gravity(&mut self) {
-        self.config.acceleration_gravity = f32::max(
-            self.config.acceleration_gravity - Config::ACCELERATION_GRAVITY_STEP,
-            Config::ACCELERATION_GRAVITY_MIN,
-        );
-        println!("Gravity: {}", self.config.acceleration_gravity);
-    }
-
-    pub fn increase_coefficient_of_restitution(&mut self) {
-        self.config.coefficient_of_restitution = f32::min(
-            self.config.coefficient_of_restitution + Config::COEFFICIENT_OF_RESTITUTION_STEP,
-            Config::COEFFICIENT_OF_RESTITUTION_MAX,
-        );
-        println!(
-            "Coefficient of restitution: {}",
-            self.config.coefficient_of_restitution
-        );
-    }
-
-    pub fn decrease_coefficient_of_restitution(&mut self) {
-        self.config.coefficient_of_restitution = f32::max(
-            self.config.coefficient_of_restitution - Config::COEFFICIENT_OF_RESTITUTION_STEP,
-            Config::COEFFICIENT_OF_RESTITUTION_MIN,
-        );
-        println!(
-            "Coefficient of restitution: {}",
-            self.config.coefficient_of_restitution
-        );
-    }
-
-    pub fn increase_coefficient_of_friction(&mut self) {
-        self.config.coefficient_of_friction = f32::min(
-            self.config.coefficient_of_friction + Config::COEFFICIENT_OF_FRICTION_STEP,
-            Config::COEFFICIENT_OF_FRICTION_MAX,
-        );
-        println!(
-            "Coefficient of friciton: {}",
-            self.config.coefficient_of_friction
-        );
-    }
-
-    pub fn decrease_coefficient_of_friciton(&mut self) {
-        self.config.coefficient_of_friction = f32::max(
-            self.config.coefficient_of_friction - Config::COEFFICIENT_OF_FRICTION_STEP,
-            Config::COEFFICIENT_OF_FRICTION_MIN,
-        );
-        println!(
-            "Coefficient of friciton: {}",
-            self.config.coefficient_of_friction
-        );
-    }
-
-    pub fn increase_static_coefficient_of_friction(&mut self) {
-        self.config.static_coefficient_of_friction = f32::min(
-            self.config.static_coefficient_of_friction
-                + Config::STATIC_COEFFICIENT_OF_FRICTION_STEP,
-            Config::STATIC_COEFFICIENT_OF_FRICTION_MAX,
-        );
-        println!(
-            "Coefficient of static friction: {}",
-            self.config.static_coefficient_of_friction
-        );
-    }
-
-    pub fn decrease_static_coefficient_of_friciton(&mut self) {
-        self.config.static_coefficient_of_friction = f32::max(
-            self.config.static_coefficient_of_friction
-                - Config::STATIC_COEFFICIENT_OF_FRICTION_STEP,
-            Config::STATIC_COEFFICIENT_OF_FRICTION_MIN,
-        );
-        println!(
-            "Coefficient of static friction: {}",
-            self.config.static_coefficient_of_friction
-        );
     }
 
     pub fn get_position(&self) -> cgmath::Vector3<f32> {
@@ -482,5 +319,16 @@ impl State {
 
         // If any wall's static friction overcomes the other forces' acceleration, we're at rest!
         any_wall_friction_overcomes_acceleration
+    }
+
+    pub fn sync_state_from_ui(&mut self, ui: &mut bounce_gui::BouncingBallUi) {
+        let ui_config_state = ui.get_gui_state_mut();
+        self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
+        self.config.sphere_mass = ui_config_state.sphere_mass;
+        self.config.drag = ui_config_state.drag;
+        self.config.wind = ui_config_state.wind;
+        self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
+        self.config.coefficient_of_friction = ui_config_state.coefficient_of_friction;
+        self.config.static_coefficient_of_friction = ui_config_state.static_coefficient_of_friction;
     }
 }

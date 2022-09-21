@@ -22,6 +22,10 @@ anyhow = "1.0"
 cgmath = "0.18"
 tobj = "3.2.1"
 itertools = "0.10.3"
+egui_winit_platform = "0.15"
+egui = "0.18"
+epi = "0.17"
+egui_wgpu_backend = "0.18"
 
 [build-dependencies]
 anyhow = "1.0"
