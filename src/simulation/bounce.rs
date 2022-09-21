@@ -3,7 +3,7 @@ use cgmath::{InnerSpace, Zero};
 
 const EPSILON: f32 = 0.001;
 
-struct Config {
+pub struct Config {
     sphere_mass: f32,
     drag: f32,
     wind: cgmath::Vector3<f32>,
@@ -14,6 +14,22 @@ struct Config {
 }
 
 impl Config {
+    pub fn default() -> Self {
+        Self {
+            sphere_mass: 1.0,
+            drag: 0.5,
+            wind: cgmath::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            acceleration_gravity: -10.0,
+            coefficient_of_restitution: 0.95,
+            coefficient_of_friction: 0.25,
+            static_coefficient_of_friction: 0.5,
+        }
+    }
+
     const MIN_SPHERE_MASS: f32 = 0.05;
     const MAX_SPHERE_MASS: f32 = 10.0;
     const SPHERE_MASS_STEP: f32 = 0.5;
@@ -153,19 +169,7 @@ impl State {
             ),
         ];
 
-        let config = Config {
-            sphere_mass: 1.0,
-            drag: 0.5,
-            wind: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            acceleration_gravity: -10.0,
-            coefficient_of_restitution: 0.95,
-            coefficient_of_friction: 0.25,
-            static_coefficient_of_friction: 0.5,
-        };
+        let config = Config::default();
 
         let position = cgmath::Vector3 {
             x: 0.0,

@@ -663,6 +663,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
+    let mut bouncing_ball_ui = gui::bounce_gui::BouncingBallUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -677,7 +678,15 @@ pub fn run() {
                 state.update(frame_time);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                let gui_render_command_buffer = gui.render(frame_time, &state.gpu.device, &state.gpu.config, &state.gpu.queue, &window, &output);
+                let gui_render_command_buffer = gui.render(
+                    &mut bouncing_ball_ui,
+                    frame_time,
+                    &state.gpu.device,
+                    &state.gpu.config,
+                    &state.gpu.queue,
+                    &window,
+                    &output
+                );
 
                 state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
                 output.present();

@@ -3,6 +3,12 @@ use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use egui_winit_platform::{Platform, PlatformDescriptor};
 use winit::{event::Event, window::Window};
 
+pub mod bounce_gui;
+
+pub trait Ui {
+    fn ui(&mut self, ctx: &egui::Context);
+}
+
 pub struct Gui {
     platform: Platform,
     render_pass: RenderPass,
@@ -32,8 +38,9 @@ impl Gui {
         self.platform.handle_event(event);
     }
 
-    pub fn render(
+    pub fn render<T: Ui>(
         &mut self,
+        ui: &mut T,
         dt: std::time::Duration,
         device: &wgpu::Device,
         config: &wgpu::SurfaceConfiguration,
@@ -52,11 +59,8 @@ impl Gui {
         // Begin to draw the UI frame.
         self.platform.begin_frame();
 
-        // A simple window.
-        egui::Window::new("Window").show(&self.platform.context(), |ui| {
-            ui.label("Hello world!");
-            ui.label("See https://github.com/emilk/egui for how to make other UI elements");
-        });
+        // Draw the UI.
+        ui.ui(&self.platform.context());
 
         // End the UI frame. We could now handle the output and draw the UI with the backend.
         let full_output = self.platform.end_frame(Some(window));
