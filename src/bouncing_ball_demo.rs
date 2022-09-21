@@ -1,19 +1,13 @@
-mod camera;
-mod forms;
-mod model;
-mod resources;
-mod simulation;
-mod texture;
-use crate::model::DrawColoredMesh;
-mod gpu_interface;
-mod gui;
-mod instance;
-
-use camera::CameraUniform;
+use crate::camera::{Camera, CameraController, CameraUniform, Projection};
+use crate::forms;
+use crate::gpu_interface::GPUInterface;
+use crate::gui;
+use crate::instance::{Instance, InstanceRaw};
+use crate::model::{ColoredMesh, ColoredVertex, DrawColoredMesh, Model, ModelVertex, Vertex};
+use crate::resources;
+use crate::simulation;
+use crate::texture;
 use cgmath::prelude::*;
-use gpu_interface::GPUInterface;
-use instance::{Instance, InstanceRaw};
-use model::Vertex;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -45,13 +39,13 @@ struct State {
     time_accumulator: std::time::Duration,
     #[allow(dead_code)]
     render_pipeline: wgpu::RenderPipeline,
-    obj_model: model::Model,
-    camera: camera::Camera,
-    projection: camera::Projection,
-    camera_uniform: camera::CameraUniform,
+    obj_model: Model,
+    camera: Camera,
+    projection: Projection,
+    camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    camera_controller: camera::CameraController,
+    camera_controller: CameraController,
     /// Models which do not require updates each frame will have their own instance buffer
     #[allow(dead_code)]
     static_instances: Vec<Instance>,
@@ -66,8 +60,8 @@ struct State {
     light_render_pipeline: wgpu::RenderPipeline,
     mouse_pressed: bool,
     colored_render_pipeline: wgpu::RenderPipeline,
-    bounding_box_mesh: model::ColoredMesh,
-    sphere_mesh: model::ColoredMesh,
+    bounding_box_mesh: ColoredMesh,
+    sphere_mesh: ColoredMesh,
     simulation_state: simulation::bounce::State,
 }
 
@@ -100,15 +94,15 @@ impl State {
                     label: Some("texture_bind_group_layout"),
                 });
 
-        let camera = camera::Camera::new((0.0, 0.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
-        let projection = camera::Projection::new(
+        let camera = Camera::new((0.0, 0.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+        let projection = Projection::new(
             gpu.config.width,
             gpu.config.height,
             cgmath::Deg(45.0),
             0.1,
             100.0,
         );
-        let camera_controller = camera::CameraController::new(4.0, 0.4);
+        let camera_controller = CameraController::new(4.0, 0.4);
 
         let mut camera_uniform = CameraUniform::new();
         camera_uniform.update_view_proj(&camera, &projection);
@@ -213,7 +207,7 @@ impl State {
                 &render_pipeline_layout,
                 gpu.config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ModelVertex::desc(), InstanceRaw::desc::<5>()],
+                &[ModelVertex::desc(), InstanceRaw::desc::<5>()],
                 shader,
             )
         };
@@ -236,7 +230,7 @@ impl State {
                 &layout,
                 gpu.config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ModelVertex::desc()],
+                &[ModelVertex::desc()],
                 shader,
             )
         };
@@ -259,7 +253,7 @@ impl State {
                 &layout,
                 gpu.config.format,
                 Some(texture::Texture::DEPTH_FORMAT),
-                &[model::ColoredVertex::desc(), InstanceRaw::desc::<5>()],
+                &[ColoredVertex::desc(), InstanceRaw::desc::<5>()],
                 shader,
             )
         };
