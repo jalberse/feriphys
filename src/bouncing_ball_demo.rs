@@ -4,7 +4,7 @@ use crate::gpu_interface::GPUInterface;
 use crate::gui;
 use crate::instance::{Instance, InstanceRaw};
 use crate::light;
-use crate::model::{ColoredMesh, ColoredVertex, DrawColoredMesh, Model, ModelVertex, Vertex};
+use crate::model::{ColoredMesh, DrawColoredMesh, Model, ModelVertex, Vertex};
 use crate::rendering;
 use crate::resources;
 use crate::simulation;
@@ -123,30 +123,11 @@ impl State {
         };
 
         // Render pipeline for colored meshes without any textures.
-        let colored_render_pipeline = {
-            let layout = gpu
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Colored Pipeline Layout"),
-                    bind_group_layouts: &[
-                        &camera_bundle.camera_bind_group_layout,
-                        &light_bind_group_layout,
-                    ],
-                    push_constant_ranges: &[],
-                });
-            let shader = wgpu::ShaderModuleDescriptor {
-                label: Some("Colored Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("color_shader.wgsl").into()),
-            };
-            rendering::create_render_pipeline(
-                &gpu.device,
-                &layout,
-                gpu.config.format,
-                Some(texture::Texture::DEPTH_FORMAT),
-                &[ColoredVertex::desc(), InstanceRaw::desc::<5>()],
-                shader,
-            )
-        };
+        let colored_render_pipeline = rendering::create_colored_mesh_render_pipeline(
+            &gpu,
+            &camera_bundle,
+            &light_bind_group_layout,
+        );
 
         let lightbulb_model = resources::load_model(
             "cube.obj",
@@ -294,19 +275,7 @@ impl State {
         // Get the unsimulated time from the previous frame, so that we simulate it this time around.
         self.time_accumulator = self.time_accumulator + frame_time;
 
-        self.camera_bundle
-            .camera_controller
-            .update_camera(&mut self.camera_bundle.camera, frame_time);
-        // TODO It's more efficient to have a staging buffer. Possible future improvement.
-        // See https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-controller-for-our-camera
-        self.camera_bundle
-            .camera_uniform
-            .update_view_proj(&self.camera_bundle.camera, &self.camera_bundle.projection);
-        self.gpu.queue.write_buffer(
-            &self.camera_bundle.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.camera_bundle.camera_uniform]),
-        );
+        self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
         // SIMULATE until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
         while self.time_accumulator >= self.simulation_state.get_timestep() {

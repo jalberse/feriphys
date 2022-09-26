@@ -294,7 +294,7 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
 
 /// Returns a 1x1 quad in the y plane centered on the origin, with normals
 /// in the positive y direction.
-fn get_quad(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
+pub fn get_quad(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
     let vertex_positions = vec![
         cgmath::Vector3 {
             x: -0.5,

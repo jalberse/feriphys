@@ -651,6 +651,7 @@ name = "feriphys"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "bytemuck",
  "cgmath",
  "clap",

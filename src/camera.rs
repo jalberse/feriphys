@@ -285,4 +285,18 @@ impl CameraBundle {
             camera_bind_group_layout,
         }
     }
+
+    pub fn update_gpu(&mut self, gpu: &GPUInterface, frame_time: std::time::Duration) {
+        self.camera_controller
+            .update_camera(&mut self.camera, frame_time);
+        // TODO It's more efficient to have a staging buffer. Possible future improvement.
+        // See https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-controller-for-our-camera
+        self.camera_uniform
+            .update_view_proj(&self.camera, &self.projection);
+        gpu.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.camera_uniform]),
+        );
+    }
 }

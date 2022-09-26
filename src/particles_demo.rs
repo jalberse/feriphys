@@ -1,14 +1,11 @@
-use crate::camera::{Camera, CameraBundle, CameraController, CameraUniform, Projection};
+use crate::camera::CameraBundle;
 use crate::gpu_interface::GPUInterface;
-use crate::instance::{Instance, InstanceRaw};
 use crate::light;
-use crate::model::{ColoredMesh, ColoredVertex, DrawColoredMesh, Model, ModelVertex, Vertex};
 use crate::rendering;
+use crate::scene::Scene;
 use crate::texture;
 use crate::{gui, utilities};
 
-use cgmath::prelude::*;
-use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -18,11 +15,13 @@ use winit::{
 
 struct State {
     gpu: GPUInterface,
-    time_accumulator: std::time::Duration,
     render_pipeline: wgpu::RenderPipeline,
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
+    light_bind_group: wgpu::BindGroup,
+    scene: Scene,
     mouse_pressed: bool,
+    time_accumulator: std::time::Duration,
 }
 
 impl State {
@@ -37,38 +36,27 @@ impl State {
         let (light_bind_group_layout, light_bind_group) =
             light::create_light_bind_group(&gpu, light_uniform);
 
-        let render_pipeline = {
-            let shader = wgpu::ShaderModuleDescriptor {
-                label: Some("Colored Mesh Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("color_shader.wgsl").into()),
-            };
-            let layout = gpu
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Colored Pipeline Layout"),
-                    bind_group_layouts: &[
-                        &camera_bundle.camera_bind_group_layout,
-                        &light_bind_group_layout,
-                    ],
-                    push_constant_ranges: &[],
-                });
-            rendering::create_render_pipeline(
-                &gpu.device,
-                &layout,
-                gpu.config.format,
-                Some(texture::Texture::DEPTH_FORMAT),
-                &[ModelVertex::desc(), InstanceRaw::desc::<5>()],
-                shader,
-            )
-        };
+        let render_pipeline = rendering::create_colored_mesh_render_pipeline(
+            &gpu,
+            &camera_bundle,
+            &light_bind_group_layout,
+        );
+
+        let scene = Scene::new(&gpu);
+
+        // TODO then, once we have a Scene that's just static and working to render stuff to the screen,
+        //   we can here first initialize our simulation, and then build the scene from the simulation's state.
+        //   Each update(), we'll update our scene from the simulation state.
 
         Self {
             gpu,
-            time_accumulator: std::time::Duration::from_millis(0),
             render_pipeline,
             depth_texture,
             camera_bundle,
+            light_bind_group,
+            scene,
             mouse_pressed: false,
+            time_accumulator: std::time::Duration::from_millis(0),
         }
     }
 
@@ -111,7 +99,13 @@ impl State {
         }
     }
 
-    fn update(&mut self, frame_time: std::time::Duration) {}
+    fn update(&mut self, frame_time: std::time::Duration) {
+        self.camera_bundle.update_gpu(&self.gpu, frame_time);
+
+        // TODO the simulation stuff/step.
+
+        // TODO Then, we need to update our Scene from the simulation.
+    }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
         let view = output
@@ -157,16 +151,12 @@ impl State {
                 }),
             });
 
-            // TODO We want to define an instance buffer and a quad mesh and draw them here.
-            //      Either here or earlier, the instances should be modified to ensure the quads are
-            //      facing the camera.
-            // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            // render_pass.draw_colored_mesh_instanced(
-            //     &self.sphere_mesh,
-            //     DYNAMIC_INSTANCE_INDEX_BALL..DYNAMIC_INSTANCE_INDEX_BALL + 1,
-            //     &self.camera_bundle.camera_bind_group,
-            //     &self.light_bind_group,
-            // );
+            render_pass.set_pipeline(&self.render_pipeline);
+            self.scene.draw(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
         }
 
         encoder.finish()

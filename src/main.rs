@@ -10,6 +10,7 @@ mod model;
 mod particles_demo;
 mod rendering;
 mod resources;
+mod scene;
 mod simulation;
 mod texture;
 mod utilities;

@@ -78,3 +78,12 @@ impl InstanceRaw {
         }
     }
 }
+
+impl Default for InstanceRaw {
+    fn default() -> InstanceRaw {
+        InstanceRaw {
+            model: [[0.0; 4]; 4],
+            normal: [[0.0; 3]; 3],
+        }
+    }
+}

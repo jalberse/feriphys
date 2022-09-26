@@ -16,11 +16,11 @@ pub struct LightUniform {
 }
 
 impl LightUniform {
-    pub fn new(pos: [f32; 3], color: [f32; 3]) -> LightUniform {
+    pub fn new(position: [f32; 3], color: [f32; 3]) -> LightUniform {
         LightUniform {
-            position: [6.0, 2.0, 6.0],
+            position,
             _padding: 0,
-            color: [1.0, 1.0, 1.0],
+            color,
             _padding2: 0,
         }
     }
