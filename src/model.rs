@@ -1,3 +1,5 @@
+use cgmath::Vector3;
+
 use super::texture;
 
 use core::ops::Range;
@@ -32,6 +34,8 @@ impl Vertex for ColoredVertex {
 
 pub struct ColoredMesh {
     pub name: String,
+    pub vertex_positions: Vec<Vector3<f32>>,
+    pub vertex_indices: Vec<u16>,
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub num_elements: u32,

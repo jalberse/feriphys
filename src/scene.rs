@@ -1,19 +1,23 @@
 use crate::entity::Entity;
 use crate::gpu_interface::GPUInterface;
 use crate::instance::Instance;
-use crate::simulation::particles::MAX_PARTICLES;
+use crate::simulation::particles::MAX_INSTANCES;
 
 use arrayvec::ArrayVec;
 use wgpu::BindGroup;
 
 pub struct Scene {
     particles: Entity,
+    obstacle: Entity,
 }
 
 impl Scene {
-    pub fn new(particles: Entity) -> Scene {
+    pub fn new(particles: Entity, obstacle: Entity) -> Scene {
         // TODO we could have particles be a Vec<Entity>, so that we could have multiple particle systems getting rendered.
-        Scene { particles }
+        Scene {
+            particles,
+            obstacle,
+        }
     }
 
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with
@@ -34,12 +38,14 @@ impl Scene {
         self.particles.orient_instances(&gpu, camera_position);
         self.particles
             .draw(render_pass, camera_bind_group, light_bind_group);
+        self.obstacle
+            .draw(render_pass, camera_bind_group, light_bind_group);
     }
 
     pub fn update_particle_locations(
         &mut self,
         gpu: &GPUInterface,
-        instances: ArrayVec<Instance, MAX_PARTICLES>,
+        instances: ArrayVec<Instance, MAX_INSTANCES>,
     ) {
         self.particles.update_instances(gpu, instances);
     }

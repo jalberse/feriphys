@@ -1,13 +1,21 @@
 use crate::camera::CameraBundle;
 
+use crate::entity::Entity;
+use crate::forms;
 use crate::gpu_interface::GPUInterface;
+use crate::instance::Instance;
 use crate::light;
 use crate::rendering;
 use crate::scene::Scene;
 use crate::simulation;
+use crate::simulation::particles::MAX_INSTANCES;
 use crate::texture;
 use crate::{gui, utilities};
 
+use arrayvec::ArrayVec;
+use cgmath::Rotation3;
+use cgmath::Vector3;
+use cgmath::Zero;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -45,9 +53,23 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let simulation_state = simulation::particles::Simulation::new();
-        let particles = simulation_state.get_particles_entity(&gpu);
-        let scene = Scene::new(particles);
+        let obstacle = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
+
+        let simulation_state = simulation::particles::Simulation::new(&obstacle);
+
+        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
+        instances.push(Instance {
+            position: Vector3::<f32>::zero(),
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            scale: 1.0,
+        });
+        let obstacle_entity = Entity::new(&gpu, obstacle, instances);
+
+        let particles_entity = simulation_state.get_particles_entity(&gpu);
+        let scene = Scene::new(particles_entity, obstacle_entity);
 
         // TODO then, once we have a Scene that's just static and working to render stuff to the screen,
         //   we can here first initialize our simulation, and then build the scene from the simulation's state.

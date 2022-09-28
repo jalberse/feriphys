@@ -1,13 +1,18 @@
 use arrayvec::ArrayVec;
-use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
+use cgmath::{InnerSpace, Quaternion, Rotation3, Vector3, Zero};
+use itertools::Itertools;
 use rand::{self, Rng};
 use std::time::Duration;
 
-use crate::{entity::Entity, forms, gpu_interface::GPUInterface, instance::Instance};
+use crate::{
+    entity::Entity, forms, gpu_interface::GPUInterface, instance::Instance, model::ColoredMesh,
+};
 
-// TODO Let's use 2500 as the max for when we add the GUI.
+// TODO Let's use 2500 as the max for when we add the GUI. We'll
+//    Keep that constant since it's used for some static instance buffer sizing.
+//    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_PARTICLES: usize = 500;
+pub const MAX_INSTANCES: usize = 500;
 
 /// TODO:
 /// Next, we need to add collisions with a polygon.
@@ -19,6 +24,35 @@ pub const MAX_PARTICLES: usize = 500;
 /// a vortex would be pretty easy to add. We can probably enable/disable as a bool.
 /// We just apply a circular force around the y axis, proportional to the distance
 /// from the center (stronger when closer up to some cap).
+
+struct Tri {
+    v1: Vector3<f32>,
+    v2: Vector3<f32>,
+    v3: Vector3<f32>,
+}
+
+impl Tri {
+    pub fn normal(&self) -> Vector3<f32> {
+        (self.v2 - self.v1).cross(self.v3 - self.v1)
+    }
+}
+
+struct Obstacle {
+    tris: Vec<Tri>,
+}
+
+impl Obstacle {
+    pub fn new(mesh: &ColoredMesh) -> Obstacle {
+        let mut tris = vec![];
+        for (i1, i2, i3) in mesh.vertex_indices.iter().tuple_windows() {
+            let v1 = mesh.vertex_positions[*i1 as usize];
+            let v2 = mesh.vertex_positions[*i2 as usize];
+            let v3 = mesh.vertex_positions[*i3 as usize];
+            tris.push(Tri { v1, v2, v3 });
+        }
+        Obstacle { tris }
+    }
+}
 
 /// Generates particles in the plane defined by position, normal.
 struct Generator {
@@ -75,7 +109,7 @@ struct ParticlePool {
 
 impl ParticlePool {
     pub fn new() -> ParticlePool {
-        let particles = vec![Particle::default(); MAX_PARTICLES];
+        let particles = vec![Particle::default(); MAX_INSTANCES];
         ParticlePool { particles }
     }
 
@@ -171,10 +205,11 @@ pub struct Simulation {
     config: Config,
     generator: Generator,
     particles: ParticlePool,
+    obstacle: Obstacle,
 }
 
 impl Simulation {
-    pub fn new() -> Simulation {
+    pub fn new(obstacle: &ColoredMesh) -> Simulation {
         let config = Config::default();
 
         let particles = ParticlePool::new();
@@ -192,10 +227,13 @@ impl Simulation {
             },
         };
 
+        let obstacle = Obstacle::new(&obstacle);
+
         Simulation {
             config,
             generator,
             particles,
+            obstacle,
         }
     }
 
@@ -245,7 +283,7 @@ impl Simulation {
     pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
-        let mut instances = ArrayVec::<Instance, MAX_PARTICLES>::new();
+        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {
                 continue;
@@ -265,8 +303,8 @@ impl Simulation {
         Entity::new(&gpu, mesh, instances)
     }
 
-    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_PARTICLES> {
-        let mut instances = ArrayVec::<Instance, MAX_PARTICLES>::new();
+    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_INSTANCES> {
+        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
 
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {

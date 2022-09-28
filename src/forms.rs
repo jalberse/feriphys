@@ -54,8 +54,8 @@ fn get_colored_vertices(
 /// Gets the vertex buffer and index buffer, respectively.
 fn get_buffers(
     device: &wgpu::Device,
-    vertex_positions: Vec<Vector3<f32>>,
-    indices: Vec<u16>,
+    vertex_positions: &Vec<Vector3<f32>>,
+    indices: &Vec<u16>,
     color: [f32; 3],
 ) -> (wgpu::Buffer, wgpu::Buffer) {
     let normals = get_normals(&vertex_positions, &indices);
@@ -132,18 +132,21 @@ pub fn get_cube_interior_normals(device: &wgpu::Device, color: [f32; 3]) -> mode
 
     // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
     // vertexes. That means generating the duplicate ones, and using 0..n as indices.
-    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+    let vertex_positions: Vec<Vector3<f32>> = indices
         .iter()
-        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .map(|i| -> Vector3<f32> { vertex_positions[*i as usize] })
         .collect();
-    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
+    let vertex_indices = Vec::from_iter(0..vertex_positions.len() as u16);
 
-    let num_elements = indices.len() as u32;
+    let num_elements = vertex_indices.len() as u32;
 
-    let (vertex_buffer, index_buffer) = get_buffers(device, vertex_positions, indices, color);
+    let (vertex_buffer, index_buffer) =
+        get_buffers(device, &vertex_positions, &vertex_indices, color);
 
     model::ColoredMesh {
         name: "Colored Cube".to_string(),
+        vertex_positions,
+        vertex_indices,
         vertex_buffer,
         index_buffer,
         num_elements,
@@ -182,7 +185,7 @@ pub fn generate_sphere(
     // |  / |
     // | /  |
     // k2--k2+1
-    let mut indices: Vec<u16> = Vec::new();
+    let mut vertex_indices: Vec<u16> = Vec::new();
 
     for i in 0..stacks {
         let mut k1 = i * (sectors + 1);
@@ -191,33 +194,35 @@ pub fn generate_sphere(
         for _j in 0..sectors {
             // First and last stacks do not need quads, just tris.
             if i != 0 {
-                indices.push(k1);
-                indices.push(k2);
-                indices.push(k1 + 1);
+                vertex_indices.push(k1);
+                vertex_indices.push(k2);
+                vertex_indices.push(k1 + 1);
             }
             if i != (stacks - 1) {
-                indices.push(k1 + 1);
-                indices.push(k2);
-                indices.push(k2 + 1);
+                vertex_indices.push(k1 + 1);
+                vertex_indices.push(k2);
+                vertex_indices.push(k2 + 1);
             }
             k1 = k1 + 1;
             k2 = k2 + 1;
         }
     }
 
-    let num_elements = indices.len() as u32;
+    let num_elements = vertex_indices.len() as u32;
 
-    let (vertex_buffer, index_buffer) = get_buffers(device, vertex_positions, indices, color);
+    let (vertex_buffer, index_buffer) =
+        get_buffers(device, &vertex_positions, &vertex_indices, color);
 
     model::ColoredMesh {
         name: "Colored Sphere".to_string(),
+        vertex_positions,
+        vertex_indices,
         vertex_buffer,
         index_buffer,
         num_elements,
     }
 }
 
-#[allow(dead_code)]
 pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
     let vertex_positions = vec![
         // front
@@ -278,14 +283,17 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         .iter()
         .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
         .collect();
-    let indices = Vec::from_iter(0..vertex_positions.len() as u16);
+    let vertex_indices = Vec::from_iter(0..vertex_positions.len() as u16);
 
-    let num_elements = indices.len() as u32;
+    let num_elements = vertex_indices.len() as u32;
 
-    let (vertex_buffer, index_buffer) = get_buffers(device, vertex_positions, indices, color);
+    let (vertex_buffer, index_buffer) =
+        get_buffers(device, &vertex_positions, &vertex_indices, color);
 
     model::ColoredMesh {
         name: "Colored Cube".to_string(),
+        vertex_positions,
+        vertex_indices,
         vertex_buffer,
         index_buffer,
         num_elements,
@@ -318,13 +326,16 @@ pub fn get_quad(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         },
     ];
 
-    let indices: Vec<u16> = vec![1, 3, 2, 2, 0, 1];
-    let num_elements = indices.len() as u32;
+    let vertex_indices: Vec<u16> = vec![1, 3, 2, 2, 0, 1];
+    let num_elements = vertex_indices.len() as u32;
 
-    let (vertex_buffer, index_buffer) = get_buffers(device, vertex_positions, indices, color);
+    let (vertex_buffer, index_buffer) =
+        get_buffers(device, &vertex_positions, &vertex_indices, color);
 
     model::ColoredMesh {
         name: "Colored Quad".to_string(),
+        vertex_positions,
+        vertex_indices,
         vertex_buffer,
         index_buffer,
         num_elements,
@@ -361,9 +372,9 @@ pub fn get_hexagon(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh
         },
     ];
 
-    let indices: Vec<u16> = vec![0, 1, 4, 1, 2, 4, 2, 3, 4];
-    let num_elements = indices.len() as u32;
-    let normals = get_normals(&vertex_positions, &indices);
+    let vertex_indices: Vec<u16> = vec![0, 1, 4, 1, 2, 4, 2, 3, 4];
+    let num_elements = vertex_indices.len() as u32;
+    let normals = get_normals(&vertex_positions, &vertex_indices);
     let vertices = get_colored_vertices(&vertex_positions, &normals, color);
 
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -373,12 +384,14 @@ pub fn get_hexagon(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh
     });
     let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("mesh colored index buffer"),
-        contents: bytemuck::cast_slice(&indices),
+        contents: bytemuck::cast_slice(&vertex_indices),
         usage: wgpu::BufferUsages::INDEX,
     });
 
     model::ColoredMesh {
         name: "Colored Hexagon".to_string(),
+        vertex_positions,
+        vertex_indices,
         vertex_buffer,
         index_buffer,
         num_elements,
