@@ -36,15 +36,11 @@ struct Particles {
     instance_buffer: Buffer,
 }
 
-pub struct Scene {
-    // TODO really, their instance buffer should probably be in the Particles struct.
-    //    So any given mesh has its model, its instances, and its buffer. The update_particle_instance_buffer() fn
-    //    we have can then be generatlized to just call that on all of the Particles (which is a struct we should really rename to like, Entity or something?)
-    particles: Particles,
-}
+impl Particles {
+    // TODO this fn should take a mesh, and instance data. For now, hard coded is fine.
+    pub fn new(gpu: &GPUInterface) -> Particles {
+        let particle_mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
-impl Scene {
-    pub fn new(gpu: &GPUInterface) -> Scene {
         let mut particle_instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
 
         // TODO For now we're just using a single instance, but we'll add more. Eventully the instances will be determined
@@ -63,8 +59,6 @@ impl Scene {
         };
         particle_instances.push(tmp_instance);
 
-        let particle_mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
-
         let particle_instance_buffer = Scene::create_particles_instance_buffer(&gpu);
         InstanceRaw::update_buffer_from_vec::<MAX_PARTICLE_INSTANCES>(
             &gpu,
@@ -72,12 +66,43 @@ impl Scene {
             &particle_instances,
         );
 
-        let particles = Particles {
+        Particles {
             mesh: particle_mesh,
             instances: particle_instances,
             instance_buffer: particle_instance_buffer,
-        };
+        }
+    }
 
+    pub fn draw<'a, 'b>(
+        &'a self,
+        render_pass: &'b mut wgpu::RenderPass<'a>,
+        camera_bind_group: &'a BindGroup,
+        light_bind_group: &'a BindGroup,
+    ) where
+        'a: 'b,
+    {
+        // TODO don't like the literal int here. Create const *_SLOT values in rendering.rs, for each render pipeline.
+        //    Speaking of, move the creation of each type of render pipeline to that file as well (we share the colored render pipeline, e.g.)
+        render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+        render_pass.draw_colored_mesh_instanced(
+            &self.mesh,
+            0..self.instances.len() as u32,
+            &camera_bind_group,
+            &light_bind_group,
+        );
+    }
+}
+
+pub struct Scene {
+    // TODO really, their instance buffer should probably be in the Particles struct.
+    //    So any given mesh has its model, its instances, and its buffer. The update_particle_instance_buffer() fn
+    //    we have can then be generatlized to just call that on all of the Particles (which is a struct we should really rename to like, Entity or something?)
+    particles: Particles,
+}
+
+impl Scene {
+    pub fn new(gpu: &GPUInterface) -> Scene {
+        let particles = Particles::new(&gpu);
         Scene { particles }
     }
 
@@ -101,26 +126,8 @@ impl Scene {
     ) where
         'a: 'b,
     {
-        self.draw_particles(render_pass, camera_bind_group, light_bind_group);
-    }
-
-    pub fn draw_particles<'a, 'b>(
-        &'a self,
-        render_pass: &'b mut wgpu::RenderPass<'a>,
-        camera_bind_group: &'a BindGroup,
-        light_bind_group: &'a BindGroup,
-    ) where
-        'a: 'b,
-    {
-        // TODO don't like the literal int here. Create const *_SLOT values in rendering.rs, for each render pipeline.
-        //    Speaking of, move the creation of each type of render pipeline to that file as well (we share the colored render pipeline, e.g.)
-        render_pass.set_vertex_buffer(1, self.particles.instance_buffer.slice(..));
-        render_pass.draw_colored_mesh_instanced(
-            &self.particles.mesh,
-            0..self.particles.instances.len() as u32,
-            &camera_bind_group,
-            &light_bind_group,
-        );
+        self.particles
+            .draw(render_pass, camera_bind_group, light_bind_group);
     }
 
     // TODO some function to orient particles instances to face the camera (give it a position and we'll point the normals to that position).
