@@ -21,7 +21,7 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    simulation_state: simulation::particles::State,
+    simulation_state: simulation::particles::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -45,7 +45,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let simulation_state = simulation::particles::State::new();
+        let simulation_state = simulation::particles::Simulation::new();
         let particles = simulation_state.get_particles_entity(&gpu);
         let scene = Scene::new(particles);
 

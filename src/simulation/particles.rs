@@ -163,14 +163,14 @@ impl Default for Config {
     }
 }
 
-pub struct State {
+pub struct Simulation {
     config: Config,
     generator: Generator,
     particles: ParticlePool,
 }
 
-impl State {
-    pub fn new() -> State {
+impl Simulation {
+    pub fn new() -> Simulation {
         let config = Config::default();
 
         let particles = ParticlePool::new();
@@ -188,7 +188,7 @@ impl State {
             },
         };
 
-        State {
+        Simulation {
             config,
             generator,
             particles,
