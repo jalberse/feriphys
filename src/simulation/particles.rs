@@ -33,6 +33,8 @@ impl Generator {
         &self,
         pool: &mut ParticlePool,
         num_particles: u32,
+        // Speed in direction of normal vector to spawn with.
+        speed: f32,
         lifetime: Duration,
     ) {
         let mut rng = rand::thread_rng();
@@ -58,7 +60,7 @@ impl Generator {
             //   particle config with min/max values.
             pool.create(
                 gen_position,
-                Vector3::<f32>::zero(),
+                self.normal * speed,
                 lifetime,
                 rng.gen_range(0.9..1.1),
                 rng.gen_range(0.4..0.6),
@@ -143,6 +145,7 @@ pub struct Config {
     pub dt: f32, // secs as f32
     pub particles_generated_per_step: u32,
     pub particles_lifetime: Duration,
+    pub particles_initial_speed: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
 }
@@ -153,6 +156,7 @@ impl Default for Config {
             dt: Duration::from_millis(1).as_secs_f32(),
             particles_generated_per_step: 1,
             particles_lifetime: Duration::from_secs(1),
+            particles_initial_speed: 1.0,
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
@@ -199,6 +203,7 @@ impl Simulation {
         self.generator.generate_particles(
             &mut self.particles,
             self.config.particles_generated_per_step,
+            self.config.particles_initial_speed,
             self.config.particles_lifetime,
         );
 
