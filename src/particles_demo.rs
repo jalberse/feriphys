@@ -21,6 +21,7 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
+    simulation_state: simulation::particles::State,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -46,7 +47,6 @@ impl State {
 
         let simulation_state = simulation::particles::State::new();
         let particles = simulation_state.get_particles_entity(&gpu);
-
         let scene = Scene::new(particles);
 
         // TODO then, once we have a Scene that's just static and working to render stuff to the screen,
@@ -59,6 +59,7 @@ impl State {
             depth_texture,
             camera_bundle,
             light_bind_group,
+            simulation_state,
             scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
@@ -105,11 +106,18 @@ impl State {
     }
 
     fn update(&mut self, frame_time: std::time::Duration) {
+        self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // TODO the simulation stuff/step.
+        // Simulate until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
+        while self.time_accumulator >= self.simulation_state.get_timestep() {
+            let elapsed_sim_time = self.simulation_state.step();
+            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        }
 
-        // TODO Then, we need to update our Scene from the simulation.
+        let particle_instances = self.simulation_state.get_particles_instances();
+        self.scene
+            .update_particle_locations(&self.gpu, particle_instances);
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {

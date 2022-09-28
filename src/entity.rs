@@ -57,6 +57,15 @@ impl Entity {
         );
     }
 
+    pub fn update_instances(
+        &mut self,
+        gpu: &GPUInterface,
+        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+    ) {
+        self.instances = instances;
+        InstanceRaw::update_buffer_from_vec(gpu, &self.instance_buffer, &self.instances);
+    }
+
     /// Orients the normal of all the instances to face the position.
     /// This is useful when rendering particles, e.g., by making
     /// their quads face the camera postiion.

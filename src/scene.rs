@@ -1,6 +1,8 @@
-use crate::entity::Entity;
+use crate::entity::{Entity, MAX_PARTICLE_INSTANCES};
 use crate::gpu_interface::GPUInterface;
+use crate::instance::Instance;
 
+use arrayvec::ArrayVec;
 use wgpu::BindGroup;
 
 pub struct Scene {
@@ -15,6 +17,9 @@ impl Scene {
 
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with
     /// what we're drawing here. We should develop a system for ensuring it's correct.
+    /// If I try to draw a not-ColoredMesh thing, we'll need to do that. Maybe we'd have multiple render passes,
+    /// each associated with a render pipeline. We can bundle those two, and then iterate over them. We can match
+    /// on the type of render pipeline (or maybe the type of entity?) and use the correct one. Something like that.
     pub fn draw<'a, 'b>(
         &'a mut self,
         gpu: &GPUInterface,
@@ -30,11 +35,11 @@ impl Scene {
             .draw(render_pass, camera_bind_group, light_bind_group);
     }
 
-    // TODO add a function(s) to update the scene data, from the simulation data. After that we'd call the function to write to the buffer.
-    // TODO Add a function to write to the buffer, like we do in bouncing_ball_demo::State::update().
-    //   Remember that our particle instances here are State.dynamic_instances there. This is just better organizaiton.
-
-    // TODO Following bouncing_ball_demo.rs, create functions for drawing the particles as appropriate, considering we're storing all the meshes and instances and stuff
-    //      in this scene rather than in the State for the demo. I think that means we have a Scene::draw() method, which takes in a render_pass.
-    //      Then we do all the setting of buffers and draw calls etc here.
+    pub fn update_particle_locations(
+        &mut self,
+        gpu: &GPUInterface,
+        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+    ) {
+        self.particles.update_instances(gpu, instances);
+    }
 }

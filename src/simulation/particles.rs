@@ -11,11 +11,6 @@ use crate::{
 
 /// TODO:
 ///
-/// State. Initialize. We can initialize a bunch on a plane.
-///
-/// A fn to get entities from the state. We'll use that to
-/// populate the Scene initially.
-///
 /// A simple step function that just changes the position of particles.
 /// Start calling it.
 ///
@@ -36,28 +31,78 @@ use crate::{
 /// We should add colors to our particles. We can do that by adding color information to IntanceRaw,
 /// and handling that in the shader instead of using our colored mesh's color. The colored mesh color
 /// will only be used to inform the default instance color.
+///
+/// a vortex would be pretty easy to add. We can probably enable/disable as a bool.
+/// We just apply a circular force around the y axis, proportional to the distance
+/// from the center (stronger when closer up to some cap).
 
 struct Particle {
     position: Vector3<f32>,
+    velocity: Vector3<f32>,
+}
+
+pub struct Config {
+    pub dt: f32, // secs as f32
+    pub acceleration_gravity: Vector3<f32>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            dt: std::time::Duration::from_millis(1).as_secs_f32(),
+            acceleration_gravity: Vector3::<f32> {
+                x: 0.0,
+                y: -10.0,
+                z: 0.0,
+            },
+        }
+    }
 }
 
 pub struct State {
+    config: Config,
     particles: Vec<Particle>,
 }
 
 impl State {
     pub fn new() -> State {
+        let config = Config::default();
+
         let mut particles = vec![];
-        for _ in 0..10 {
+        for _ in 0..100 {
             particles.push(Particle {
                 position: Vector3::<f32> {
                     x: rand::random::<f32>() * 3.0,
                     y: rand::random::<f32>() * 3.0,
                     z: rand::random::<f32>() * 3.0,
                 },
+                velocity: Vector3::<f32> {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             })
         }
-        State { particles }
+        State { config, particles }
+    }
+
+    pub fn step(&mut self) -> std::time::Duration {
+        for particle in self.particles.iter_mut() {
+            // Calculate acceleration of particle from forces
+            let acceleration = self.config.acceleration_gravity;
+
+            let original_position = particle.position;
+            let original_velocity = particle.velocity;
+
+            // Euler integration to get the new location
+            let new_position = original_position + self.config.dt * original_velocity;
+            let new_velocity = original_velocity + self.config.dt * acceleration;
+
+            particle.position = new_position;
+            particle.velocity = new_velocity;
+        }
+
+        std::time::Duration::from_secs_f32(self.config.dt)
     }
 
     pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
@@ -78,5 +123,25 @@ impl State {
         }
 
         Entity::new(&gpu, mesh, instances)
+    }
+
+    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_PARTICLE_INSTANCES> {
+        let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
+
+        for particle in self.particles.iter() {
+            instances.push(Instance {
+                position: particle.position,
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 0.05,
+            });
+        }
+        instances
+    }
+
+    pub fn get_timestep(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f32(self.config.dt)
     }
 }
