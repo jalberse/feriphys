@@ -33,6 +33,7 @@ const MAX_PARTICLE_INSTANCES: usize = 1000;
 struct Particles {
     mesh: ColoredMesh,
     instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+    instance_buffer: Buffer,
 }
 
 pub struct Scene {
@@ -40,7 +41,6 @@ pub struct Scene {
     //    So any given mesh has its model, its instances, and its buffer. The update_particle_instance_buffer() fn
     //    we have can then be generatlized to just call that on all of the Particles (which is a struct we should really rename to like, Entity or something?)
     particles: Particles,
-    particle_instance_buffer: Buffer,
 }
 
 impl Scene {
@@ -75,12 +75,10 @@ impl Scene {
         let particles = Particles {
             mesh: particle_mesh,
             instances: particle_instances,
+            instance_buffer: particle_instance_buffer,
         };
 
-        Scene {
-            particles,
-            particle_instance_buffer,
-        }
+        Scene { particles }
     }
 
     pub fn create_particles_instance_buffer(gpu: &GPUInterface) -> Buffer {
@@ -116,7 +114,7 @@ impl Scene {
     {
         // TODO don't like the literal int here. Create const *_SLOT values in rendering.rs, for each render pipeline.
         //    Speaking of, move the creation of each type of render pipeline to that file as well (we share the colored render pipeline, e.g.)
-        render_pass.set_vertex_buffer(1, self.particle_instance_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, self.particles.instance_buffer.slice(..));
         render_pass.draw_colored_mesh_instanced(
             &self.particles.mesh,
             0..self.particles.instances.len() as u32,
