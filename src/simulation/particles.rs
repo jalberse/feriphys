@@ -1,16 +1,16 @@
 use arrayvec::ArrayVec;
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 use rand::{self, Rng};
+use std::time::Duration;
 
-use crate::{
-    entity::{Entity, MAX_PARTICLE_INSTANCES},
-    forms,
-    gpu_interface::GPUInterface,
-    instance::Instance,
-};
+use crate::{entity::Entity, forms, gpu_interface::GPUInterface, instance::Instance};
+
+// TODO When we add GUI, set the max to higher than this.
+pub const MAX_PARTICLES: usize = 1000;
 
 /// TODO:
-/// Next, we can add a generator. We'll now have something like snow falling.
+/// We can't use many particles because the Pool is on the stack.
+/// We should allocate it on the heap to avoid stack overflow.
 ///
 /// Next, we need to add collisions with a polygon.
 ///
@@ -22,19 +22,66 @@ use crate::{
 /// We just apply a circular force around the y axis, proportional to the distance
 /// from the center (stronger when closer up to some cap).
 
+/// Generates particles in the plane defined by position, normal.
+struct Generator {
+    position: Vector3<f32>,
+    normal: Vector3<f32>,
+}
+
+impl Generator {
+    // Generates particles in a uniform distribution with
+    // zero initial velocity.
+    pub fn generate_particles(
+        &self,
+        pool: &mut ParticlePool,
+        num_particles: u32,
+        lifetime: Duration,
+    ) {
+        let mut rng = rand::thread_rng();
+
+        let non_parallel_vec =
+            if cgmath::relative_eq!(self.normal.normalize(), Vector3::<f32>::unit_z()) {
+                Vector3::<f32>::unit_x()
+            } else {
+                Vector3::<f32>::unit_z()
+            };
+
+        let vec_in_plane = self.normal.cross(non_parallel_vec).normalize();
+        for _ in 0..num_particles {
+            let angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
+            let radius: f32 = 1.0 - rng.gen::<f32>().powi(2);
+
+            let rotated_vec = vec_in_plane * f32::cos(angle)
+                + self.normal.cross(vec_in_plane) * f32::sin(angle)
+                + self.normal * self.normal.dot(vec_in_plane) * (1.0 - f32::cos(angle));
+            let gen_position = self.position + rotated_vec.normalize() * radius;
+
+            // TODO make the mass, range configurable. I guess we might pass some
+            //   particle config with min/max values.
+            pool.create(
+                gen_position,
+                Vector3::<f32>::zero(),
+                lifetime,
+                rng.gen_range(0.9..1.1),
+                rng.gen_range(0.4..0.6),
+            );
+        }
+    }
+}
+
 struct ParticlePool {
-    pub particles: [Particle; MAX_PARTICLE_INSTANCES],
+    pub particles: [Particle; MAX_PARTICLES],
 }
 
 impl ParticlePool {
     pub fn new() -> ParticlePool {
-        let particles: [Particle; MAX_PARTICLE_INSTANCES] =
-            [Particle::default(); MAX_PARTICLE_INSTANCES];
+        let particles: [Particle; MAX_PARTICLES] = [Particle::default(); MAX_PARTICLES];
         ParticlePool { particles }
     }
 
     /// Activates a particle in the pool and initializes to values.
     /// If there are no free particles in the pool, does nothing.
+    /// TODO: Use a free list instead of searching for first unused particle.
     pub fn create(
         &mut self,
         position: Vector3<f32>,
@@ -87,7 +134,7 @@ impl Default for Particle {
         Particle {
             position: Vector3::<f32>::zero(),
             velocity: Vector3::<f32>::zero(),
-            lifetime: std::time::Duration::ZERO,
+            lifetime: Duration::ZERO,
             mass: 0.0,
             drag: 0.0,
         }
@@ -96,6 +143,8 @@ impl Default for Particle {
 
 pub struct Config {
     pub dt: f32, // secs as f32
+    pub particles_generated_per_step: u32,
+    pub particles_lifetime: Duration,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
 }
@@ -103,7 +152,9 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            dt: std::time::Duration::from_millis(1).as_secs_f32(),
+            dt: Duration::from_millis(1).as_secs_f32(),
+            particles_generated_per_step: 1,
+            particles_lifetime: Duration::from_secs(1),
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
@@ -116,6 +167,7 @@ impl Default for Config {
 
 pub struct State {
     config: Config,
+    generator: Generator,
     particles: ParticlePool,
 }
 
@@ -123,26 +175,35 @@ impl State {
     pub fn new() -> State {
         let config = Config::default();
 
-        let mut particles = ParticlePool::new();
+        let particles = ParticlePool::new();
 
-        let mut rng = rand::thread_rng();
-        for _ in 0..100 {
-            particles.create(
-                Vector3::<f32> {
-                    x: rng.gen_range(-1.0..1.0),
-                    y: rng.gen_range(-1.0..1.0),
-                    z: rng.gen_range(-1.0..1.0),
-                },
-                Vector3::<f32>::zero(),
-                std::time::Duration::from_secs(1),
-                rng.gen_range(0.9..1.1),
-                rng.gen_range(0.4..0.6),
-            )
+        let generator = Generator {
+            position: Vector3::<f32> {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+            normal: Vector3::<f32> {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+        };
+
+        State {
+            config,
+            generator,
+            particles,
         }
-        State { config, particles }
     }
 
     pub fn step(&mut self) -> std::time::Duration {
+        self.generator.generate_particles(
+            &mut self.particles,
+            self.config.particles_generated_per_step,
+            self.config.particles_lifetime,
+        );
+
         for particle in self.particles.particles.iter_mut() {
             // TODO rather than manually checking this here, the pool
             //  should offer an iterator over the active particles.
@@ -187,7 +248,7 @@ impl State {
     pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
-        let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
+        let mut instances = ArrayVec::<Instance, MAX_PARTICLES>::new();
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {
                 continue;
@@ -207,8 +268,8 @@ impl State {
         Entity::new(&gpu, mesh, instances)
     }
 
-    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_PARTICLE_INSTANCES> {
-        let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
+    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_PARTICLES> {
+        let mut instances = ArrayVec::<Instance, MAX_PARTICLES>::new();
 
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {

@@ -3,6 +3,7 @@ use crate::instance::Instance;
 use crate::instance::InstanceRaw;
 use crate::model::ColoredMesh;
 use crate::model::DrawColoredMesh;
+use crate::simulation::particles::MAX_PARTICLES;
 
 use arrayvec::ArrayVec;
 use cgmath::EuclideanSpace;
@@ -14,12 +15,10 @@ use wgpu::Buffer;
 // TODO If we were to make our instancing system more robust, we would have a strategy for letting
 //    the instance buffer grow and shrink, creating new larger/smaller instance buffers as needed.
 //    But for now, we'll just have one buffer large enough for our purposes without a reallocation strategy.
-// TODO raise this to a much higher value, just a small number for dev right now.
-pub const MAX_PARTICLE_INSTANCES: usize = 1000;
 
 pub struct Entity {
     mesh: ColoredMesh,
-    instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+    instances: ArrayVec<Instance, MAX_PARTICLES>,
     instance_buffer: Buffer,
 }
 
@@ -27,7 +26,7 @@ impl Entity {
     pub fn new(
         gpu: &GPUInterface,
         mesh: ColoredMesh,
-        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+        instances: ArrayVec<Instance, MAX_PARTICLES>,
     ) -> Entity {
         let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances);
 
@@ -60,7 +59,7 @@ impl Entity {
     pub fn update_instances(
         &mut self,
         gpu: &GPUInterface,
-        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+        instances: ArrayVec<Instance, MAX_PARTICLES>,
     ) {
         self.instances = instances;
         InstanceRaw::update_buffer_from_vec(gpu, &self.instance_buffer, &self.instances);

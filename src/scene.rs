@@ -1,6 +1,7 @@
-use crate::entity::{Entity, MAX_PARTICLE_INSTANCES};
+use crate::entity::Entity;
 use crate::gpu_interface::GPUInterface;
 use crate::instance::Instance;
+use crate::simulation::particles::MAX_PARTICLES;
 
 use arrayvec::ArrayVec;
 use wgpu::BindGroup;
@@ -38,7 +39,7 @@ impl Scene {
     pub fn update_particle_locations(
         &mut self,
         gpu: &GPUInterface,
-        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+        instances: ArrayVec<Instance, MAX_PARTICLES>,
     ) {
         self.particles.update_instances(gpu, instances);
     }
