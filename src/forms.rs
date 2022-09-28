@@ -318,7 +318,7 @@ pub fn get_quad(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         },
     ];
 
-    let indices: Vec<u16> = vec![2, 3, 1, 1, 0, 2];
+    let indices: Vec<u16> = vec![1, 3, 2, 2, 0, 1];
     let num_elements = indices.len() as u32;
 
     let (vertex_buffer, index_buffer) = get_buffers(device, vertex_positions, indices, color);
