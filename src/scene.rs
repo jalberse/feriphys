@@ -1,103 +1,15 @@
-use crate::forms;
-/// So, I guess we want https://gameprogrammingpatterns.com/flyweight.html
-/// According to that, We would create some Entity that stores the instance data (i.e. position, rotation, scale)
-/// and a reference to some single Mesh for the Scene. For now, that Mesh can just be explicitly a particle mesh field
-/// stored for the scene. We'd eventually want to abstract that in some way for arbitrary meshes.
-///
-///
-/// We can make a Entity that stores a mesh (really, a model, but we'll start with just ColoredMesh)
-/// and an array of Intances.
-///     We'll actually use an arrayvec of instances so we have a vec of all active instances, while capping at what our buffer can manage.
-///     We'll repopulate the instances vector every frame based on all the active particles from the simulation/pool. Worry about performance later.
-/// The Scene will actually have a draw() call, which iterates over Entities and draws them instanced as needed.
-/// Each Entity has its own InstanceBuffer. The instance buffer will always be a static length.
-use crate::instance::InstanceRaw;
-use crate::model::DrawColoredMesh;
-use crate::{gpu_interface::GPUInterface, instance::Instance, model::ColoredMesh};
+use crate::entity::Entity;
+use crate::gpu_interface::GPUInterface;
 
-use arrayvec::ArrayVec;
-use cgmath::Rotation3;
 use wgpu::BindGroup;
-use wgpu::Buffer;
-
-// TODO If we were to make our instancing system more robust, we would have a strategy for letting
-//    the instance buffer grow and shrink, creating new larger/smaller instance buffers as needed.
-//    But for now, we'll just have one buffer large enough for our purposes without a reallocation strategy.
-// TODO raise this to a much higher value, just a small number for dev right now.
-const MAX_PARTICLE_INSTANCES: usize = 1000;
-
-// TODO Really, this should be a more general struct for storing any instanced mesh (or textured models!), since
-//      we're not treating particles in any unique way. But we'll keep it like this for now, since
-//      we're focussed on the particle system.
-struct Particles {
-    mesh: ColoredMesh,
-    instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
-    instance_buffer: Buffer,
-}
-
-impl Particles {
-    // TODO this fn should take a mesh, and instance data. For now, hard coded is fine.
-    pub fn new(gpu: &GPUInterface) -> Particles {
-        let particle_mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
-
-        let mut particle_instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
-
-        // TODO For now we're just using a single instance, but we'll add more. Eventully the instances will be determined
-        //  by the initial state o the simulation.
-        let tmp_instance = Instance {
-            position: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        };
-        particle_instances.push(tmp_instance);
-
-        let particle_instance_buffer =
-            InstanceRaw::create_buffer_from_vec(&gpu, &particle_instances);
-
-        Particles {
-            mesh: particle_mesh,
-            instances: particle_instances,
-            instance_buffer: particle_instance_buffer,
-        }
-    }
-
-    pub fn draw<'a, 'b>(
-        &'a self,
-        render_pass: &'b mut wgpu::RenderPass<'a>,
-        camera_bind_group: &'a BindGroup,
-        light_bind_group: &'a BindGroup,
-    ) where
-        'a: 'b,
-    {
-        // TODO don't like the literal int here. Create const *_SLOT values in rendering.rs, for each render pipeline.
-        //    Speaking of, move the creation of each type of render pipeline to that file as well (we share the colored render pipeline, e.g.)
-        render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-        render_pass.draw_colored_mesh_instanced(
-            &self.mesh,
-            0..self.instances.len() as u32,
-            &camera_bind_group,
-            &light_bind_group,
-        );
-    }
-}
 
 pub struct Scene {
-    // TODO really, their instance buffer should probably be in the Particles struct.
-    //    So any given mesh has its model, its instances, and its buffer. The update_particle_instance_buffer() fn
-    //    we have can then be generatlized to just call that on all of the Particles (which is a struct we should really rename to like, Entity or something?)
-    particles: Particles,
+    particles: Entity,
 }
 
 impl Scene {
     pub fn new(gpu: &GPUInterface) -> Scene {
-        let particles = Particles::new(&gpu);
+        let particles = Entity::new(&gpu);
         Scene { particles }
     }
 

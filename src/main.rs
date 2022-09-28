@@ -1,6 +1,7 @@
 mod args;
 mod bouncing_ball_demo;
 mod camera;
+mod entity;
 mod forms;
 mod gpu_interface;
 mod gui;
