@@ -5,13 +5,11 @@ use std::time::Duration;
 
 use crate::{entity::Entity, forms, gpu_interface::GPUInterface, instance::Instance};
 
-// TODO When we add GUI, set the max to higher than this.
-pub const MAX_PARTICLES: usize = 1000;
+// TODO Let's use 2500 as the max for when we add the GUI.
+//   For now, I'm lowering while we develop the simulation further.
+pub const MAX_PARTICLES: usize = 500;
 
 /// TODO:
-/// We can't use many particles because the Pool is on the stack.
-/// We should allocate it on the heap to avoid stack overflow.
-///
 /// Next, we need to add collisions with a polygon.
 ///
 /// We should add colors to our particles. We can do that by adding color information to IntanceRaw,
@@ -70,12 +68,12 @@ impl Generator {
 }
 
 struct ParticlePool {
-    pub particles: [Particle; MAX_PARTICLES],
+    pub particles: Vec<Particle>,
 }
 
 impl ParticlePool {
     pub fn new() -> ParticlePool {
-        let particles: [Particle; MAX_PARTICLES] = [Particle::default(); MAX_PARTICLES];
+        let particles = vec![Particle::default(); MAX_PARTICLES];
         ParticlePool { particles }
     }
 
@@ -231,13 +229,7 @@ impl State {
 
             particle.position = new_position;
             particle.velocity = new_velocity;
-        }
 
-        // Finally, decrement each particle's lifetime, possible killing them.
-        for particle in self.particles.particles.iter_mut() {
-            if !particle.in_use() {
-                continue;
-            }
             particle.lifetime = std::time::Duration::ZERO
                 .max(particle.lifetime - std::time::Duration::from_secs_f32(self.config.dt));
         }
