@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use cgmath::{InnerSpace, Rotation3, Vector3};
+use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 use rand::{self, Rng};
 
 use crate::{
@@ -10,9 +10,6 @@ use crate::{
 };
 
 /// TODO:
-/// Next, we can add a lifetime. After some time, all the particles should die.
-/// This will involve setting up our pool!
-///
 /// Next, we can add a generator. We'll now have something like snow falling.
 ///
 /// Next, we need to add collisions with a polygon.
@@ -88,16 +85,8 @@ impl Particle {
 impl Default for Particle {
     fn default() -> Self {
         Particle {
-            position: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            velocity: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            position: Vector3::<f32>::zero(),
+            velocity: Vector3::<f32>::zero(),
             lifetime: std::time::Duration::ZERO,
             mass: 0.0,
             drag: 0.0,
@@ -120,11 +109,7 @@ impl Default for Config {
                 y: -10.0,
                 z: 0.0,
             },
-            wind: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            wind: Vector3::<f32>::zero(),
         }
     }
 }
@@ -148,11 +133,7 @@ impl State {
                     y: rng.gen_range(-1.0..1.0),
                     z: rng.gen_range(-1.0..1.0),
                 },
-                Vector3::<f32> {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
+                Vector3::<f32>::zero(),
                 std::time::Duration::from_secs(1),
                 rng.gen_range(0.9..1.1),
                 rng.gen_range(0.4..0.6),
