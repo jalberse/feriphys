@@ -1,3 +1,4 @@
+use wgpu::util::DeviceExt;
 use wgpu::Buffer;
 
 use crate::gpu_interface::GPUInterface;
@@ -80,6 +81,26 @@ impl InstanceRaw {
                 },
             ],
         }
+    }
+
+    /// Creates a buffer of InstanceRaw data from the instances,
+    /// and schedules a write to that buffer with the instance data.
+    pub fn create_buffer_from_vec<const NUM_INSTANCES: usize>(
+        gpu: &GPUInterface,
+        instances: &arrayvec::ArrayVec<Instance, NUM_INSTANCES>,
+    ) -> Buffer {
+        let zeroed_raw_instance_array = [InstanceRaw::default(); NUM_INSTANCES];
+        let buffer = gpu
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Dynamic Instance Buffer"),
+                contents: bytemuck::cast_slice(&zeroed_raw_instance_array),
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            });
+        // Note we don't need to declare buffer as mut because this only *schedules*
+        // an update to the buffer via Queue::write_buffer().
+        InstanceRaw::update_buffer_from_vec::<NUM_INSTANCES>(&gpu, &buffer, &instances);
+        buffer
     }
 
     /// Updates the the instance buffer with the vector of instances,

@@ -17,7 +17,6 @@ use crate::{gpu_interface::GPUInterface, instance::Instance, model::ColoredMesh}
 
 use arrayvec::ArrayVec;
 use cgmath::Rotation3;
-use wgpu::util::DeviceExt;
 use wgpu::BindGroup;
 use wgpu::Buffer;
 
@@ -59,12 +58,8 @@ impl Particles {
         };
         particle_instances.push(tmp_instance);
 
-        let particle_instance_buffer = Scene::create_particles_instance_buffer(&gpu);
-        InstanceRaw::update_buffer_from_vec::<MAX_PARTICLE_INSTANCES>(
-            &gpu,
-            &particle_instance_buffer,
-            &particle_instances,
-        );
+        let particle_instance_buffer =
+            InstanceRaw::create_buffer_from_vec(&gpu, &particle_instances);
 
         Particles {
             mesh: particle_mesh,
@@ -104,16 +99,6 @@ impl Scene {
     pub fn new(gpu: &GPUInterface) -> Scene {
         let particles = Particles::new(&gpu);
         Scene { particles }
-    }
-
-    pub fn create_particles_instance_buffer(gpu: &GPUInterface) -> Buffer {
-        let zeroed_raw_instance_array = [InstanceRaw::default(); MAX_PARTICLE_INSTANCES];
-        gpu.device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Dynamic Instance Buffer"),
-                contents: bytemuck::cast_slice(&zeroed_raw_instance_array),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            })
     }
 
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with
