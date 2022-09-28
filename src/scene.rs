@@ -65,20 +65,22 @@ impl Scene {
 
         let particle_mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
+        let particle_instance_buffer = Scene::create_particles_instance_buffer(&gpu);
+        InstanceRaw::update_buffer_from_vec::<MAX_PARTICLE_INSTANCES>(
+            &gpu,
+            &particle_instance_buffer,
+            &particle_instances,
+        );
+
         let particles = Particles {
             mesh: particle_mesh,
             instances: particle_instances,
         };
-        let particle_instance_buffer = Scene::create_particles_instance_buffer(&gpu);
 
-        let mut scene = Scene {
+        Scene {
             particles,
             particle_instance_buffer,
-        };
-
-        scene.update_particle_instance_buffer(&gpu);
-
-        scene
+        }
     }
 
     pub fn create_particles_instance_buffer(gpu: &GPUInterface) -> Buffer {
@@ -89,27 +91,6 @@ impl Scene {
                 contents: bytemuck::cast_slice(&zeroed_raw_instance_array),
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             })
-    }
-
-    /// Updates the particles_instance_buffer from the Scene's particle data.
-    /// The instance data for all active particles is updated, since they are all likely to change each frame.
-    /// The buffer is updated from 0..N where N is the number of instances. The remaining length of the buffer
-    /// remains untouched.
-    fn update_particle_instance_buffer(&mut self, gpu: &GPUInterface) {
-        let particle_instances_raw_data = self
-            .particles
-            .instances
-            .iter()
-            .map(Instance::to_raw)
-            .collect::<Vec<_>>();
-
-        for instance_data in particle_instances_raw_data {
-            gpu.queue.write_buffer(
-                &self.particle_instance_buffer,
-                0,
-                bytemuck::cast_slice(&[instance_data]),
-            );
-        }
     }
 
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with

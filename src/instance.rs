@@ -1,3 +1,7 @@
+use wgpu::Buffer;
+
+use crate::gpu_interface::GPUInterface;
+
 /// Stores an instance's transformations.
 pub struct Instance {
     pub position: cgmath::Vector3<f32>,
@@ -75,6 +79,26 @@ impl InstanceRaw {
                     format: wgpu::VertexFormat::Float32x3,
                 },
             ],
+        }
+    }
+
+    /// Updates the the instance buffer with the vector of instances,
+    /// started from the beginning of the buffer. Panics if the instances
+    /// vector is larger than the buffer.
+    /// Really, this only schedules a write to the buffer via gpu.queue.write_buffer().
+    /// The buffer is updated from 0..N where N is the number of instances. The remaining length of the buffer
+    /// remains untouched.
+    /// Useful for if all instances are likely to be updated each frame, such as in particle systems.
+    pub fn update_buffer_from_vec<const NUM_INSTANCES: usize>(
+        gpu: &GPUInterface,
+        buffer: &Buffer,
+        instances: &arrayvec::ArrayVec<Instance, NUM_INSTANCES>,
+    ) {
+        let instances_raw_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+
+        for instance_data in instances_raw_data {
+            gpu.queue
+                .write_buffer(&buffer, 0, bytemuck::cast_slice(&[instance_data]));
         }
     }
 }
