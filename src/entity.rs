@@ -1,4 +1,3 @@
-use crate::forms;
 use crate::gpu_interface::GPUInterface;
 use crate::instance::Instance;
 use crate::instance::InstanceRaw;
@@ -8,7 +7,6 @@ use crate::model::DrawColoredMesh;
 use arrayvec::ArrayVec;
 use cgmath::EuclideanSpace;
 use cgmath::InnerSpace;
-use cgmath::Rotation3;
 use cgmath::Vector3;
 use wgpu::BindGroup;
 use wgpu::Buffer;
@@ -26,7 +24,6 @@ pub struct Entity {
 }
 
 impl Entity {
-    // TODO this fn should take a mesh, and instance data. For now, hard coded is fine.
     pub fn new(
         gpu: &GPUInterface,
         mesh: ColoredMesh,

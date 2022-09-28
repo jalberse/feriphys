@@ -117,9 +117,12 @@ impl InstanceRaw {
     ) {
         let instances_raw_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
 
-        for instance_data in instances_raw_data {
-            gpu.queue
-                .write_buffer(&buffer, 0, bytemuck::cast_slice(&[instance_data]));
+        for (index, instance_data) in instances_raw_data.iter().enumerate() {
+            gpu.queue.write_buffer(
+                &buffer,
+                index as u64 * std::mem::size_of::<InstanceRaw>() as u64,
+                bytemuck::cast_slice(&[*instance_data]),
+            );
         }
     }
 }

@@ -8,7 +8,7 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(gpu: &GPUInterface, particles: Entity) -> Scene {
+    pub fn new(particles: Entity) -> Scene {
         // TODO we could have particles be a Vec<Entity>, so that we could have multiple particle systems getting rendered.
         Scene { particles }
     }
