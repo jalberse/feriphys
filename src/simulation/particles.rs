@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
-use cgmath::{Rotation3, Vector3};
-use rand;
+use cgmath::{InnerSpace, Rotation3, Vector3};
+use rand::{self, Rng};
 
 use crate::{
     entity::{Entity, MAX_PARTICLE_INSTANCES},
@@ -10,16 +10,7 @@ use crate::{
 };
 
 /// TODO:
-///
-/// A simple step function that just changes the position of particles.
-/// Start calling it.
-///
-/// A function to get instances from the state. We'll call that to get
-/// the updated positions, and then pass those instances
-/// to the scene to update the rendered positions.
-///
-/// Now that we can visualzie particles moving, we can add a simple force.
-/// Add gravity and wind, and let them fall.
+/// Add drag, wind
 ///
 /// Next, we can add a lifetime. After some time, all the particles should die.
 /// This will involve setting up our pool!
@@ -39,11 +30,14 @@ use crate::{
 struct Particle {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
+    pub mass: f32,
+    pub drag: f32,
 }
 
 pub struct Config {
     pub dt: f32, // secs as f32
     pub acceleration_gravity: Vector3<f32>,
+    pub wind: cgmath::Vector3<f32>,
 }
 
 impl Default for Config {
@@ -53,6 +47,11 @@ impl Default for Config {
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
+                z: 0.0,
+            },
+            wind: Vector3::<f32> {
+                x: 0.0,
+                y: 0.0,
                 z: 0.0,
             },
         }
@@ -68,19 +67,22 @@ impl State {
     pub fn new() -> State {
         let config = Config::default();
 
+        let mut rng = rand::thread_rng();
         let mut particles = vec![];
         for _ in 0..100 {
             particles.push(Particle {
                 position: Vector3::<f32> {
-                    x: rand::random::<f32>() * 3.0,
-                    y: rand::random::<f32>() * 3.0,
-                    z: rand::random::<f32>() * 3.0,
+                    x: rng.gen_range(-1.0..1.0),
+                    y: rng.gen_range(-1.0..1.0),
+                    z: rng.gen_range(-1.0..1.0),
                 },
                 velocity: Vector3::<f32> {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
                 },
+                mass: rng.gen_range(0.9..1.1),
+                drag: rng.gen_range(0.4..0.6),
             })
         }
         State { config, particles }
@@ -89,7 +91,15 @@ impl State {
     pub fn step(&mut self) -> std::time::Duration {
         for particle in self.particles.iter_mut() {
             // Calculate acceleration of particle from forces
-            let acceleration = self.config.acceleration_gravity;
+            let acceleration_air_resistance =
+                -1.0 * particle.drag * particle.velocity * particle.velocity.magnitude()
+                    / particle.mass;
+
+            let acceleration_wind =
+                particle.drag * self.config.wind * self.config.wind.magnitude() / particle.mass;
+
+            let acceleration =
+                self.config.acceleration_gravity + acceleration_air_resistance + acceleration_wind;
 
             let original_position = particle.position;
             let original_velocity = particle.velocity;
