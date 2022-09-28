@@ -16,19 +16,19 @@ impl Scene {
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with
     /// what we're drawing here. We should develop a system for ensuring it's correct.
     pub fn draw<'a, 'b>(
-        &'a self,
+        &'a mut self,
+        gpu: &GPUInterface,
         render_pass: &'b mut wgpu::RenderPass<'a>,
+        camera_position: cgmath::Point3<f32>,
         camera_bind_group: &'a BindGroup,
         light_bind_group: &'a BindGroup,
     ) where
         'a: 'b,
     {
+        self.particles.orient_instances(&gpu, camera_position);
         self.particles
             .draw(render_pass, camera_bind_group, light_bind_group);
     }
-
-    // TODO some function to orient particles instances to face the camera (give it a position and we'll point the normals to that position).
-    //     Do this after I just like, get a particle rendered in whatever orientation so I know all the drawing stuff works.
 
     // TODO add a function(s) to update the scene data, from the simulation data. After that we'd call the function to write to the buffer.
     // TODO Add a function to write to the buffer, like we do in bouncing_ball_demo::State::update().

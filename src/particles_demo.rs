@@ -153,7 +153,9 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             self.scene.draw(
+                &self.gpu,
                 &mut render_pass,
+                self.camera_bundle.camera.position,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );

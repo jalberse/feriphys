@@ -6,7 +6,10 @@ use crate::model::ColoredMesh;
 use crate::model::DrawColoredMesh;
 
 use arrayvec::ArrayVec;
+use cgmath::EuclideanSpace;
+use cgmath::InnerSpace;
 use cgmath::Rotation3;
+use cgmath::Vector3;
 use wgpu::BindGroup;
 use wgpu::Buffer;
 
@@ -71,5 +74,19 @@ impl Entity {
             &camera_bind_group,
             &light_bind_group,
         );
+    }
+
+    /// Orients the normal of all the instances to face the position.
+    /// This is useful when rendering particles, e.g., by making
+    /// their quads face the camera postiion.
+    pub fn orient_instances(&mut self, gpu: &GPUInterface, position: cgmath::Point3<f32>) {
+        for instance in self.instances.iter_mut() {
+            instance.rotation = cgmath::Quaternion::from_arc(
+                Vector3::unit_y(),
+                (position.to_vec() - instance.position).normalize(),
+                None,
+            );
+        }
+        InstanceRaw::update_buffer_from_vec(gpu, &self.instance_buffer, &self.instances);
     }
 }
