@@ -53,7 +53,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let obstacle = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
+        let obstacle = forms::get_cube_kilter(&gpu.device, [0.9, 0.1, 0.1]);
 
         let simulation_state = simulation::particles::Simulation::new(&obstacle);
 

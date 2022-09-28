@@ -223,6 +223,7 @@ pub fn generate_sphere(
     }
 }
 
+#[allow(dead_code)]
 pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
     let vertex_positions = vec![
         // front
@@ -260,6 +261,83 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
             x: 1.0,
             y: 1.0,
             z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: 1.0,
+            z: -1.0,
+        },
+    ];
+
+    let indices: Vec<u16> = vec![
+        0, 1, 2, 2, 3, 0, // front
+        1, 5, 6, 6, 2, 1, // right
+        7, 6, 5, 5, 4, 7, // back
+        4, 0, 3, 3, 7, 4, // left
+        4, 5, 1, 1, 0, 4, // bottom
+        3, 2, 6, 6, 7, 3, // top
+    ];
+
+    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
+        .iter()
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .collect();
+    let vertex_indices = Vec::from_iter(0..vertex_positions.len() as u16);
+
+    let num_elements = vertex_indices.len() as u32;
+
+    let (vertex_buffer, index_buffer) =
+        get_buffers(device, &vertex_positions, &vertex_indices, color);
+
+    model::ColoredMesh {
+        name: "Colored Cube".to_string(),
+        vertex_positions,
+        vertex_indices,
+        vertex_buffer,
+        index_buffer,
+        num_elements,
+    }
+}
+
+pub fn get_cube_kilter(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
+    let vertex_positions = vec![
+        // front
+        cgmath::Vector3 {
+            x: -0.5,
+            y: -0.7,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: 0.8,
+            y: -0.8,
+            z: 0.9,
+        },
+        cgmath::Vector3 {
+            x: 0.75,
+            y: 0.5,
+            z: 0.6,
+        },
+        cgmath::Vector3 {
+            x: -0.8,
+            y: 0.5,
+            z: 0.55,
+        },
+        cgmath::Vector3 {
+            x: -0.6,
+            y: -0.6,
+            z: -0.6,
+        },
+        cgmath::Vector3 {
+            x: 0.7,
+            y: -0.7,
+            z: -0.7,
+        },
+        cgmath::Vector3 {
+            x: 0.75,
+            y: 0.75,
+            z: -0.75,
         },
         cgmath::Vector3 {
             x: -1.0,

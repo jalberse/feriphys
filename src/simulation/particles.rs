@@ -17,6 +17,8 @@ pub const MAX_INSTANCES: usize = 500;
 /// TODO:
 /// Next, we need to add collisions with a polygon.
 ///
+/// Add GUI for moving generator, changing config, etc...
+///
 /// We should add colors to our particles. We can do that by adding color information to IntanceRaw,
 /// and handling that in the shader instead of using our colored mesh's color. The colored mesh color
 /// will only be used to inform the default instance color.
@@ -52,6 +54,12 @@ impl Obstacle {
         }
         Obstacle { tris }
     }
+
+    // TODO check for collisions with tris. Return a Option(Tri).
+    // which returns the tri you collided with, or None if no collision.
+    // We can just call that for each particle, and use the collision position
+    // and velocity, no partial timestep. Otherwise it's equivalent to the
+    // sphere collision code from then on.
 }
 
 /// Generates particles in the plane defined by position, normal.
