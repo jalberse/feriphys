@@ -10,8 +10,6 @@ use crate::{
 };
 
 /// TODO:
-/// Add drag, wind
-///
 /// Next, we can add a lifetime. After some time, all the particles should die.
 /// This will involve setting up our pool!
 ///
@@ -27,11 +25,84 @@ use crate::{
 /// We just apply a circular force around the y axis, proportional to the distance
 /// from the center (stronger when closer up to some cap).
 
+struct ParticlePool {
+    pub particles: [Particle; MAX_PARTICLE_INSTANCES],
+}
+
+impl ParticlePool {
+    pub fn new() -> ParticlePool {
+        let particles: [Particle; MAX_PARTICLE_INSTANCES] =
+            [Particle::default(); MAX_PARTICLE_INSTANCES];
+        ParticlePool { particles }
+    }
+
+    /// Activates a particle in the pool and initializes to values.
+    /// If there are no free particles in the pool, does nothing.
+    pub fn create(
+        &mut self,
+        position: Vector3<f32>,
+        velocity: Vector3<f32>,
+        lifetime: std::time::Duration,
+        mass: f32,
+        drag: f32,
+    ) {
+        for particle in self.particles.iter_mut() {
+            if !particle.in_use() {
+                particle.init(position, velocity, lifetime, mass, drag);
+                return;
+            }
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
 struct Particle {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
+    lifetime: std::time::Duration,
     pub mass: f32,
     pub drag: f32,
+}
+
+impl Particle {
+    fn init(
+        &mut self,
+        position: Vector3<f32>,
+        velocity: Vector3<f32>,
+        lifetime: std::time::Duration,
+        mass: f32,
+        drag: f32,
+    ) {
+        self.position = position;
+        self.velocity = velocity;
+        self.lifetime = lifetime;
+        self.mass = mass;
+        self.drag = drag;
+    }
+
+    fn in_use(&self) -> bool {
+        !self.lifetime.is_zero()
+    }
+}
+
+impl Default for Particle {
+    fn default() -> Self {
+        Particle {
+            position: Vector3::<f32> {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            velocity: Vector3::<f32> {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            lifetime: std::time::Duration::ZERO,
+            mass: 0.0,
+            drag: 0.0,
+        }
+    }
 }
 
 pub struct Config {
@@ -60,36 +131,44 @@ impl Default for Config {
 
 pub struct State {
     config: Config,
-    particles: Vec<Particle>,
+    particles: ParticlePool,
 }
 
 impl State {
     pub fn new() -> State {
         let config = Config::default();
 
+        let mut particles = ParticlePool::new();
+
         let mut rng = rand::thread_rng();
-        let mut particles = vec![];
         for _ in 0..100 {
-            particles.push(Particle {
-                position: Vector3::<f32> {
+            particles.create(
+                Vector3::<f32> {
                     x: rng.gen_range(-1.0..1.0),
                     y: rng.gen_range(-1.0..1.0),
                     z: rng.gen_range(-1.0..1.0),
                 },
-                velocity: Vector3::<f32> {
+                Vector3::<f32> {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
                 },
-                mass: rng.gen_range(0.9..1.1),
-                drag: rng.gen_range(0.4..0.6),
-            })
+                std::time::Duration::from_secs(1),
+                rng.gen_range(0.9..1.1),
+                rng.gen_range(0.4..0.6),
+            )
         }
         State { config, particles }
     }
 
     pub fn step(&mut self) -> std::time::Duration {
-        for particle in self.particles.iter_mut() {
+        for particle in self.particles.particles.iter_mut() {
+            // TODO rather than manually checking this here, the pool
+            //  should offer an iterator over the active particles.
+            if !particle.in_use() {
+                continue;
+            }
+
             // Calculate acceleration of particle from forces
             let acceleration_air_resistance =
                 -1.0 * particle.drag * particle.velocity * particle.velocity.magnitude()
@@ -112,6 +191,15 @@ impl State {
             particle.velocity = new_velocity;
         }
 
+        // Finally, decrement each particle's lifetime, possible killing them.
+        for particle in self.particles.particles.iter_mut() {
+            if !particle.in_use() {
+                continue;
+            }
+            particle.lifetime = std::time::Duration::ZERO
+                .max(particle.lifetime - std::time::Duration::from_secs_f32(self.config.dt));
+        }
+
         std::time::Duration::from_secs_f32(self.config.dt)
     }
 
@@ -119,7 +207,10 @@ impl State {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
         let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
-        for particle in self.particles.iter() {
+        for particle in self.particles.particles.iter() {
+            if !particle.in_use() {
+                continue;
+            }
             let instance = Instance {
                 position: particle.position,
                 // TODO this should be some Default.
@@ -138,7 +229,10 @@ impl State {
     pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_PARTICLE_INSTANCES> {
         let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
 
-        for particle in self.particles.iter() {
+        for particle in self.particles.particles.iter() {
+            if !particle.in_use() {
+                continue;
+            }
             instances.push(Instance {
                 position: particle.position,
                 rotation: cgmath::Quaternion::from_axis_angle(
