@@ -17,7 +17,7 @@ use wgpu::Buffer;
 //    the instance buffer grow and shrink, creating new larger/smaller instance buffers as needed.
 //    But for now, we'll just have one buffer large enough for our purposes without a reallocation strategy.
 // TODO raise this to a much higher value, just a small number for dev right now.
-const MAX_PARTICLE_INSTANCES: usize = 1000;
+pub const MAX_PARTICLE_INSTANCES: usize = 1000;
 
 pub struct Entity {
     mesh: ColoredMesh,
@@ -27,27 +27,11 @@ pub struct Entity {
 
 impl Entity {
     // TODO this fn should take a mesh, and instance data. For now, hard coded is fine.
-    pub fn new(gpu: &GPUInterface) -> Entity {
-        let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
-
-        let mut instances = ArrayVec::<Instance, MAX_PARTICLE_INSTANCES>::new();
-
-        // TODO For now we're just using a single instance, but we'll add more. Eventully the instances will be determined
-        //  by the initial state o the simulation.
-        let tmp_instance = Instance {
-            position: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        };
-        instances.push(tmp_instance);
-
+    pub fn new(
+        gpu: &GPUInterface,
+        mesh: ColoredMesh,
+        instances: ArrayVec<Instance, MAX_PARTICLE_INSTANCES>,
+    ) -> Entity {
         let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances);
 
         Entity {
