@@ -7,7 +7,7 @@ use crate::{
     gui,
 };
 
-use super::generator::Generator;
+use super::generator;
 use super::obstacle::Obstacle;
 
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
@@ -80,7 +80,6 @@ impl Default for Config {
 
 pub struct Simulation {
     config: Config,
-    generator: Generator,
     particles: ParticlePool,
     obstacle: Obstacle,
 }
@@ -91,24 +90,10 @@ impl Simulation {
 
         let particles = ParticlePool::new();
 
-        let generator = Generator {
-            position: Vector3::<f32> {
-                x: 0.0,
-                y: 2.0,
-                z: 0.0,
-            },
-            normal: Vector3::<f32> {
-                x: 0.0,
-                y: 2.0,
-                z: 0.0,
-            },
-        };
-
         let obstacle = Obstacle::new(&obstacle);
 
         Simulation {
             config,
-            generator,
             particles,
             obstacle,
         }
@@ -137,7 +122,7 @@ impl Simulation {
             0.0_f32.max(self.config.particles_drag_mean - self.config.particles_drag_range);
         let max_drag = self.config.particles_drag_mean + self.config.particles_drag_range;
 
-        self.generator.generate_particles(
+        generator::generate_particles(
             self.config.generator_position,
             self.config.generator_normal,
             self.config.generator_radius,
