@@ -105,6 +105,20 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.particles_drag_mean,
+                    ParticlesUi::MIN_DRAG..=ParticlesUi::MAX_DRAG,
+                )
+                .text("Drag Mean"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.particles_drag_range,
+                    ParticlesUi::MIN_DRAG_RANGE..=ParticlesUi::MAX_DRAG_RANGE,
+                )
+                .text("Drag Range"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.generator_radius,
                     ParticlesUi::MIN_GENERATOR_RADIUS..=ParticlesUi::MAX_GENERATOR_RADIUS,
                 )
@@ -157,10 +171,10 @@ impl ParticlesUi {
     const MIN_MASS_RANGE: f32 = 0.0;
     const MAX_MASS_RANGE: f32 = 10.0;
 
-    // TODO we'll apply these as a min/max range for particle generation
-    // This range would actually be the bounds for a min/max we set ourselves... Confusing lol
-    // const MIN_DRAG: f32 = 0.05;
-    // const MAX_DRAG: f32 = 2.0;
+    const MIN_DRAG: f32 = 0.0;
+    const MAX_DRAG: f32 = 2.0;
+    const MIN_DRAG_RANGE: f32 = 0.0;
+    const MAX_DRAG_RANGE: f32 = 1.0;
 
     const MIN_WIND: f32 = -5.0;
     const MAX_WIND: f32 = 5.0;

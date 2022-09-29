@@ -27,6 +27,7 @@ impl Generator {
         speed: Range<f32>,
         lifetime: Range<Duration>,
         mass: Range<f32>,
+        drag: Range<f32>,
     ) {
         self.position = position;
         self.normal = normal;
@@ -55,7 +56,7 @@ impl Generator {
                 self.normal * rng.gen_range(speed.start..=speed.end),
                 rng.gen_range(lifetime.start..=lifetime.end),
                 rng.gen_range(mass.start..=mass.end),
-                rng.gen_range(0.4..0.6),
+                rng.gen_range(drag.start..=drag.end),
             );
         }
     }

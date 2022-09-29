@@ -35,6 +35,8 @@ pub struct Config {
     pub particles_initial_speed_range: f32,
     pub particles_mass_mean: f32,
     pub particles_mass_range: f32,
+    pub particles_drag_mean: f32,
+    pub particles_drag_range: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
     pub generator_radius: f32,
@@ -53,6 +55,8 @@ impl Default for Config {
             particles_initial_speed_range: 0.1,
             particles_mass_mean: 1.0,
             particles_mass_range: 0.0,
+            particles_drag_mean: 0.5,
+            particles_drag_range: 0.0,
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
@@ -110,11 +114,6 @@ impl Simulation {
         // TODO we want a way to generate fewer particles, maybe tying it "number generated per second".
         //   Right now we just get to max very quickly, so it generates in waves.
 
-        // For all of these, we can do this in UI by a center of range, and range from that. We'll call it *_mean and *_range.
-        // TODO For speed and lifetime, change the UI to the "mean" of those values.
-        //   Then add a slider for range around that mean, and pass that in here instead of having same value for every particle.
-        //   Ensure we clamp the ranges as appropriate.
-        // TODO then do the same for the mass and drag of the particles, which are just hardcoded ranges right now.
         let min_lifetime = match Duration::from_secs_f32(self.config.particles_lifetime_mean)
             .checked_sub(Duration::from_secs_f32(
                 self.config.particles_lifetime_range,
@@ -129,6 +128,10 @@ impl Simulation {
         let min_mass =
             0.0_f32.max(self.config.particles_mass_mean - self.config.particles_mass_range);
         let max_mass = self.config.particles_mass_mean + self.config.particles_mass_range;
+
+        let min_drag =
+            0.0_f32.max(self.config.particles_drag_mean - self.config.particles_drag_range);
+        let max_drag = self.config.particles_drag_mean + self.config.particles_drag_range;
 
         self.generator.generate_particles(
             self.config.generator_position,
@@ -149,6 +152,10 @@ impl Simulation {
             Range {
                 start: min_mass,
                 end: max_mass,
+            },
+            Range {
+                start: min_drag,
+                end: max_drag,
             },
         );
 
@@ -298,6 +305,8 @@ impl Simulation {
         self.config.particles_initial_speed_range = ui_config_state.particles_initial_speed_range;
         self.config.particles_mass_mean = ui_config_state.particles_mass_mean;
         self.config.particles_mass_range = ui_config_state.particles_mass_range;
+        self.config.particles_drag_mean = ui_config_state.particles_drag_mean;
+        self.config.particles_drag_range = ui_config_state.particles_drag_range;
         self.config.generator_radius = ui_config_state.generator_radius;
         self.config.generator_position = ui_config_state.generator_position;
         self.config.generator_normal = ui_config_state.generator_normal;
