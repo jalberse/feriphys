@@ -84,7 +84,7 @@ impl State {
         let render_pipeline = {
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Normal Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/shader.wgsl").into()),
             };
             rendering::create_render_pipeline(
                 &gpu.device,
@@ -110,7 +110,7 @@ impl State {
                 });
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Light Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/light.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/light.wgsl").into()),
             };
             rendering::create_render_pipeline(
                 &gpu.device,
