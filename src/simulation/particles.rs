@@ -12,7 +12,7 @@ use super::particle::ParticlePool;
 //    Keep that constant since it's used for some static instance buffer sizing.
 //    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 10000;
+pub const MAX_INSTANCES: usize = 200000;
 
 const EPSILON: f32 = 0.001;
 
