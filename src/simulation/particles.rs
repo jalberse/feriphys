@@ -34,6 +34,7 @@ pub struct Config {
     pub particles_drag_range: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
+    pub y_axis_attractor_gravity: f32,
     pub generator_radius: f32,
     pub generator_position: Vector3<f32>,
     pub generator_normal: Vector3<f32>,
@@ -62,6 +63,7 @@ impl Default for Config {
                 y: 0.0,
                 z: 0.0,
             },
+            y_axis_attractor_gravity: 0.0,
             generator_radius: 1.0,
             generator_position: Vector3::<f32>::unit_y() * 2.0,
             generator_normal: Vector3::<f32>::unit_y(),
@@ -176,7 +178,7 @@ impl Simulation {
                 * center_line_unit_vec;
             let displacement_from_center_line =
                 (particle.position - Vector3::<f32>::zero()) - displacement_on_center_line;
-            let acceleration_gravity_center_line = -2.0 * 1.0
+            let acceleration_gravity_center_line = self.config.y_axis_attractor_gravity
                 / displacement_from_center_line.magnitude().powi(2)
                 * displacement_from_center_line;
 
@@ -308,6 +310,7 @@ impl Simulation {
         self.config.particles_generated_per_step = ui_config_state.particles_generated_per_step;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
+        self.config.y_axis_attractor_gravity = ui_config_state.y_axis_attractor_gravity;
         self.config.particles_lifetime_mean = ui_config_state.particles_lifetime_mean;
         self.config.particles_lifetime_range = ui_config_state.particles_lifetime_range;
         self.config.particles_initial_speed_mean = ui_config_state.particles_initial_speed_mean;

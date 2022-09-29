@@ -48,6 +48,14 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.y_axis_attractor_gravity,
+                    ParticlesUi::MIN_Y_AXIS_ATTRACTOR_GRAVITY
+                        ..=ParticlesUi::MAX_Y_AXIS_ATTRCTOR_GRAVITY,
+                )
+                .text("Y Axis Attractor Gravity"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.wind.x,
                     ParticlesUi::MIN_WIND..=ParticlesUi::MAX_WIND,
                 )
@@ -166,6 +174,9 @@ impl ParticlesUi {
 
     const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
     const ACCELERATION_GRAVITY_MAX: f32 = 20.0;
+
+    const MIN_Y_AXIS_ATTRACTOR_GRAVITY: f32 = -10.0;
+    const MAX_Y_AXIS_ATTRCTOR_GRAVITY: f32 = 10.0;
 
     const MIN_LIFETIME: std::time::Duration = std::time::Duration::from_secs(1);
     const MAX_LIFETIME: std::time::Duration = std::time::Duration::from_secs(10);
