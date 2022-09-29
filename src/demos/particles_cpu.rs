@@ -204,7 +204,6 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    // TODO we'll want to define some particles UI and create it here to pass in.
     let mut particles_ui = gui::particles_gui::ParticlesUi::new();
 
     let mut current_time = std::time::SystemTime::now();
