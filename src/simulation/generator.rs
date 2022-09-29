@@ -3,7 +3,7 @@ use std::time::Duration;
 use cgmath::{InnerSpace, Vector3};
 use rand::Rng;
 
-use super::particles::ParticlePool;
+use super::particle::ParticlePool;
 
 /// Generates particles in the plane defined by position, normal.
 pub struct Generator {
