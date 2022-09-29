@@ -84,6 +84,12 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.coefficient_of_friction,
+                    ParticlesUi::MIN_COEFFICIENT_OF_FRICTION..=ParticlesUi::MAX_COEFFICIENT_OF_FRICTION,
+                ).text("Coefficient of Friction"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.particles_lifetime_mean,
                     ParticlesUi::MIN_LIFETIME.as_secs_f32()
                         ..=ParticlesUi::MAX_LIFETIME.as_secs_f32(),
@@ -184,6 +190,9 @@ impl ParticlesUi {
 
     const MIN_COEFFICIENT_OF_RESTITUTION: f32 = 0.0;
     const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 2.0;
+
+    const MIN_COEFFICIENT_OF_FRICTION: f32 = 0.0;
+    const MAX_COEFFICIENT_OF_FRICTION: f32 = 1.0;
 
     const MIN_Y_AXIS_ATTRACTOR_GRAVITY: f32 = -10.0;
     const MAX_Y_AXIS_ATTRCTOR_GRAVITY: f32 = 10.0;

@@ -42,6 +42,7 @@ pub struct Config {
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
     pub coefficient_of_restitution: f32,
+    pub coefficient_of_friction: f32,
     pub y_axis_attractor_gravity: f32,
     pub generator_radius: f32,
     pub generator_position: Vector3<f32>,
@@ -72,6 +73,7 @@ impl Default for Config {
                 z: 0.0,
             },
             coefficient_of_restitution: 0.95,
+            coefficient_of_friction: 0.3,
             y_axis_attractor_gravity: 0.0,
             generator_radius: 1.0,
             generator_position: Vector3::<f32>::unit_y() * 2.0,
@@ -224,11 +226,10 @@ impl Simulation {
                     let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
                         velocity_collision_tangent
                     } else {
-                        // TODO make the coefficient of friction (0.3 here) configurable.
                         velocity_collision_tangent
                             - velocity_collision_tangent.normalize()
                                 * f32::min(
-                                    0.9 * velocity_collision_normal.magnitude(),
+                                    self.config.coefficient_of_friction * velocity_collision_normal.magnitude(),
                                     velocity_collision_tangent.magnitude(),
                                 )
                     };
@@ -304,6 +305,7 @@ impl Simulation {
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
         self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
+        self.config.coefficient_of_friction = ui_config_state.coefficient_of_friction;
         self.config.y_axis_attractor_gravity = ui_config_state.y_axis_attractor_gravity;
         self.config.particles_lifetime_mean = ui_config_state.particles_lifetime_mean;
         self.config.particles_lifetime_range = ui_config_state.particles_lifetime_range;
