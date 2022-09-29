@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use cgmath::{InnerSpace, Quaternion, Rotation3, Vector3, Zero};
+use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 use itertools::Itertools;
 use rand::{self, Rng};
 use std::time::Duration;
@@ -12,11 +12,11 @@ use crate::{
 //    Keep that constant since it's used for some static instance buffer sizing.
 //    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 500;
+pub const MAX_INSTANCES: usize = 2000;
+
+const EPSILON: f32 = 0.001;
 
 /// TODO:
-/// Next, we need to add collisions with a polygon.
-///
 /// Add GUI for moving generator, changing config, etc...
 ///
 /// We should add colors to our particles. We can do that by adding color information to IntanceRaw,
@@ -35,16 +35,42 @@ struct Tri {
 
 impl Tri {
     pub fn normal(&self) -> Vector3<f32> {
-        (self.v2 - self.v1).cross(self.v3 - self.v1)
+        (self.v2 - self.v1).cross(self.v3 - self.v1).normalize()
+    }
+
+    pub fn distance_from_plane(&self, point: cgmath::Vector3<f32>) -> f32 {
+        (point - self.v1).dot(self.normal())
     }
 }
 
 struct Obstacle {
     tris: Vec<Tri>,
+    min_x: f32,
+    max_x: f32,
+    min_y: f32,
+    max_y: f32,
+    min_z: f32,
+    max_z: f32,
 }
 
 impl Obstacle {
     pub fn new(mesh: &ColoredMesh) -> Obstacle {
+        let mut min_x = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut min_y = f32::MAX;
+        let mut max_y = f32::MIN;
+        let mut min_z = f32::MAX;
+        let mut max_z = f32::MIN;
+        for vertex_index in mesh.vertex_indices.iter() {
+            let v = mesh.vertex_positions[*vertex_index as usize];
+            min_x = min_x.min(v.x);
+            max_x = max_x.max(v.x);
+            min_y = min_y.min(v.y);
+            max_y = max_y.max(v.y);
+            min_z = min_z.min(v.z);
+            max_z = max_z.max(v.z);
+        }
+
         let mut tris = vec![];
         for (i1, i2, i3) in mesh.vertex_indices.iter().tuple_windows() {
             let v1 = mesh.vertex_positions[*i1 as usize];
@@ -52,14 +78,141 @@ impl Obstacle {
             let v3 = mesh.vertex_positions[*i3 as usize];
             tris.push(Tri { v1, v2, v3 });
         }
-        Obstacle { tris }
+        Obstacle {
+            tris,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            min_z,
+            max_z,
+        }
     }
 
-    // TODO check for collisions with tris. Return a Option(Tri).
-    // which returns the tri you collided with, or None if no collision.
-    // We can just call that for each particle, and use the collision position
-    // and velocity, no partial timestep. Otherwise it's equivalent to the
-    // sphere collision code from then on.
+    /// True if the position is in the bounds of the box.
+    /// Useful for quick preliminary checks.
+    /// Should call with the NEW position, not the old position.
+    pub fn in_bounds(&self, position: &Vector3<f32>) -> bool {
+        position.x >= self.min_x
+            && position.x <= self.max_x
+            && position.y >= self.min_y
+            && position.y <= self.max_y
+            && position.z >= self.min_z
+            && position.z <= self.max_z
+    }
+
+    /// Returns None if the particle did not collide with the tri.
+    /// Otherwise, returns the first polygon it finds that it did collide with.
+    pub fn get_collided_tri(
+        &self,
+        old_position: Vector3<f32>,
+        old_velocity: Vector3<f32>,
+        new_position: Vector3<f32>,
+        dt: f32,
+    ) -> Option<&Tri> {
+        self.tris.iter().find(|tri| -> bool {
+            // TODO add preliminary check for bounding box.
+            let old_distance_to_plane = tri.distance_from_plane(old_position);
+            let new_distance_to_plane = tri.distance_from_plane(new_position);
+            // If the signs are different, the point has crossed the plane
+            let crossed_plane = old_distance_to_plane.is_sign_positive()
+                != new_distance_to_plane.is_sign_positive();
+            if !crossed_plane {
+                false
+            } else {
+                // Get the point in the plane of the tri
+                let fraction_timestep =
+                    old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
+
+                let collision_point = old_position + dt * fraction_timestep * old_velocity;
+
+                // Flatten the tri and the point into 2D to check containment.
+                let (v1_flat, v2_flat, v3_flat, point_flat) =
+                    if tri.normal().x >= tri.normal().y && tri.normal().x >= tri.normal().z {
+                        // Eliminate the x component of all the elements
+                        let v1_flat = Vector3::<f32> {
+                            x: 0.0,
+                            y: tri.v1.y,
+                            z: tri.v1.z,
+                        };
+                        let v2_flat = Vector3::<f32> {
+                            x: 0.0,
+                            y: tri.v2.y,
+                            z: tri.v2.z,
+                        };
+                        let v3_flat = Vector3::<f32> {
+                            x: 0.0,
+                            y: tri.v3.y,
+                            z: tri.v3.z,
+                        };
+                        let point_flat = Vector3::<f32> {
+                            x: 0.0,
+                            y: collision_point.y,
+                            z: collision_point.z,
+                        };
+                        (v1_flat, v2_flat, v3_flat, point_flat)
+                    } else if tri.normal().y >= tri.normal().x && tri.normal().y >= tri.normal().z {
+                        // Eliminate the y component of all the elements
+                        let v1_flat = Vector3::<f32> {
+                            x: tri.v1.x,
+                            y: 0.0,
+                            z: tri.v1.z,
+                        };
+                        let v2_flat = Vector3::<f32> {
+                            x: tri.v2.x,
+                            y: 0.0,
+                            z: tri.v2.z,
+                        };
+                        let v3_flat = Vector3::<f32> {
+                            x: tri.v3.x,
+                            y: 0.0,
+                            z: tri.v3.z,
+                        };
+                        let point_flat = Vector3::<f32> {
+                            x: collision_point.x,
+                            y: 0.0,
+                            z: collision_point.z,
+                        };
+                        (v1_flat, v2_flat, v3_flat, point_flat)
+                    } else {
+                        // Eliminate the z component of all the elements
+                        let v1_flat = Vector3::<f32> {
+                            x: tri.v1.x,
+                            y: tri.v1.y,
+                            z: 0.0,
+                        };
+                        let v2_flat = Vector3::<f32> {
+                            x: tri.v2.x,
+                            y: tri.v2.y,
+                            z: 0.0,
+                        };
+                        let v3_flat = Vector3::<f32> {
+                            x: tri.v3.x,
+                            y: tri.v3.y,
+                            z: 0.0,
+                        };
+                        let point_flat = Vector3::<f32> {
+                            x: collision_point.x,
+                            y: collision_point.y,
+                            z: 0.0,
+                        };
+                        (v1_flat, v2_flat, v3_flat, point_flat)
+                    };
+
+                // Then check the point by comparing the orientation of the cross products
+                let cross1 = (v2_flat - v1_flat).cross(point_flat - v1_flat);
+                let cross2 = (v3_flat - v2_flat).cross(point_flat - v2_flat);
+                let cross3 = (v1_flat - v3_flat).cross(point_flat - v3_flat);
+
+                let cross1_orientation = cross1.dot(tri.normal()).is_sign_positive();
+                let cross2_orientation = cross2.dot(tri.normal()).is_sign_positive();
+                let cross3_orientation = cross3.dot(tri.normal()).is_sign_positive();
+
+                // The point is in the polygon iff the orientation for all three cross products are equal.
+                cross1_orientation == cross2_orientation && cross2_orientation == cross3_orientation
+            }
+        })
+    }
 }
 
 /// Generates particles in the plane defined by position, normal.
@@ -197,14 +350,18 @@ impl Default for Config {
         Self {
             dt: Duration::from_millis(1).as_secs_f32(),
             particles_generated_per_step: 1,
-            particles_lifetime: Duration::from_secs(1),
+            particles_lifetime: Duration::from_secs(5),
             particles_initial_speed: 1.0,
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
                 z: 0.0,
             },
-            wind: Vector3::<f32>::zero(),
+            wind: Vector3::<f32> {
+                x: 0.5,
+                y: 0.0,
+                z: 0.0,
+            },
         }
     }
 }
@@ -278,8 +435,60 @@ impl Simulation {
             let new_position = original_position + self.config.dt * original_velocity;
             let new_velocity = original_velocity + self.config.dt * acceleration;
 
-            particle.position = new_position;
-            particle.velocity = new_velocity;
+            // TODO here, check for collisions with the tris. Set new_position and new_velocity accordingly.
+            //  Similar to ball collision code, but no partial timestep.
+
+            let collided_tri_maybe = if self.obstacle.in_bounds(&new_position) {
+                self.obstacle.get_collided_tri(
+                    original_position,
+                    original_velocity,
+                    new_position,
+                    self.config.dt,
+                )
+            } else {
+                None
+            };
+
+            (particle.position, particle.velocity) = match collided_tri_maybe {
+                None => (new_position, new_velocity),
+                Some(tri) => {
+                    let old_distance_to_plane = tri.distance_from_plane(original_position);
+                    let new_distance_to_plane = tri.distance_from_plane(new_position);
+
+                    // Get the point in the plane of the tri
+                    let fraction_timestep =
+                        old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
+
+                    let collision_point =
+                        original_position + self.config.dt * fraction_timestep * original_velocity;
+                    let velocity_collision =
+                        original_velocity + self.config.dt * fraction_timestep * acceleration;
+
+                    let new_position = collision_point + tri.normal() * EPSILON;
+
+                    let velocity_collision_normal =
+                        velocity_collision.dot(tri.normal()) * tri.normal();
+                    let velocity_collision_tangent = velocity_collision - velocity_collision_normal;
+
+                    // TODO make the coefficient of restitution (0.9 here) configurable.
+                    let velocity_response_normal = -1.0 * velocity_collision_normal * 0.95;
+                    let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
+                        velocity_collision_tangent
+                    } else {
+                        // TODO make the coefficient of friction (0.3 here) configurable.
+                        velocity_collision_tangent
+                            - velocity_collision_tangent.normalize()
+                                * f32::min(
+                                    0.9 * velocity_collision_normal.magnitude(),
+                                    velocity_collision_tangent.magnitude(),
+                                )
+                    };
+
+                    let velocity_response = velocity_response_normal + velocity_response_tangent;
+
+                    (new_position, velocity_response)
+                }
+            };
 
             particle.lifetime = std::time::Duration::ZERO
                 .max(particle.lifetime - std::time::Duration::from_secs_f32(self.config.dt));
