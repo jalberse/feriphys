@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{ops::Range, time::Duration};
 
 use cgmath::{InnerSpace, Vector3};
 use rand::Rng;
@@ -23,7 +23,7 @@ impl Generator {
         pool: &mut ParticlePool,
         num_particles: u32,
         // Speed in direction of normal vector to spawn with.
-        speed: f32,
+        speed: Range<f32>,
         lifetime: Duration,
         radius: f32,
     ) {
@@ -53,7 +53,7 @@ impl Generator {
             //   particle config with min/max values.
             pool.create(
                 gen_position,
-                self.normal * speed,
+                self.normal * rng.gen_range(speed.start..=speed.end),
                 lifetime,
                 rng.gen_range(0.9..1.1),
                 rng.gen_range(0.4..0.6),

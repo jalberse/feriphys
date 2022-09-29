@@ -69,10 +69,17 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
-                    &mut self.sim_config.particles_initial_speed,
+                    &mut self.sim_config.particles_initial_speed_mean,
                     ParticlesUi::MIN_SPEED..=ParticlesUi::MAX_SPEED,
                 )
-                .text("Initial Speed"),
+                .text("Initial Speed Mean"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.particles_initial_speed_range,
+                    ParticlesUi::MIN_SPEED_RANGE..=ParticlesUi::MAX_SPEED_RANGE,
+                )
+                .text("Initial Speed Range"),
             );
             ui.add(
                 Slider::new(
@@ -118,6 +125,8 @@ impl ParticlesUi {
 
     const MIN_SPEED: f32 = 0.0;
     const MAX_SPEED: f32 = 50.0;
+    const MIN_SPEED_RANGE: f32 = 0.0;
+    const MAX_SPEED_RANGE: f32 = 50.0;
 
     // TODO we'll apply these as a min/max range for particle generation
     // This range would actually be the bounds for a min/max we set ourselves... Confusing lol

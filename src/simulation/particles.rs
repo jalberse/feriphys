@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
-use std::time::Duration;
+use std::{ops::Range, time::Duration};
 
 use crate::{
     entity::Entity, forms, gpu_interface::GPUInterface, gui, instance::Instance,
@@ -30,7 +30,8 @@ pub struct Config {
     pub dt: f32, // secs as f32
     pub particles_generated_per_step: u32,
     pub particles_lifetime: f32, // secs as f32
-    pub particles_initial_speed: f32,
+    pub particles_initial_speed_mean: f32,
+    pub particles_initial_speed_range: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
     pub generator_radius: f32,
@@ -44,7 +45,8 @@ impl Default for Config {
             dt: Duration::from_millis(1).as_secs_f32(),
             particles_generated_per_step: 1,
             particles_lifetime: Duration::from_secs(5).as_secs_f32(),
-            particles_initial_speed: 1.0,
+            particles_initial_speed_mean: 1.0,
+            particles_initial_speed_range: 0.1,
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
                 y: -10.0,
@@ -112,7 +114,12 @@ impl Simulation {
             self.config.generator_normal,
             &mut self.particles,
             self.config.particles_generated_per_step,
-            self.config.particles_initial_speed,
+            Range {
+                start: (self.config.particles_initial_speed_mean
+                    - self.config.particles_initial_speed_range),
+                end: (self.config.particles_initial_speed_mean
+                    + self.config.particles_initial_speed_range),
+            },
             Duration::from_secs_f32(self.config.particles_lifetime),
             self.config.generator_radius,
         );
@@ -258,7 +265,8 @@ impl Simulation {
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
         self.config.particles_lifetime = ui_config_state.particles_lifetime;
-        self.config.particles_initial_speed = ui_config_state.particles_initial_speed;
+        self.config.particles_initial_speed_mean = ui_config_state.particles_initial_speed_mean;
+        self.config.particles_initial_speed_range = ui_config_state.particles_initial_speed_range;
         self.config.generator_radius = ui_config_state.generator_radius;
         self.config.generator_position = ui_config_state.generator_position;
         self.config.generator_normal = ui_config_state.generator_normal;
