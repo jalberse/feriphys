@@ -1,5 +1,5 @@
 use crate::gui::Ui;
-use crate::simulation::particles;
+use crate::simulation::particles_cpu::particles;
 
 use egui::Slider;
 

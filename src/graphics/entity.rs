@@ -3,7 +3,7 @@ use super::instance::Instance;
 use super::instance::InstanceRaw;
 use super::model::ColoredMesh;
 use super::model::DrawColoredMesh;
-use crate::simulation::particles::MAX_INSTANCES;
+use crate::simulation::particles_cpu::particles::MAX_INSTANCES;
 
 use cgmath::{EuclideanSpace, InnerSpace, Vector3};
 use wgpu::{BindGroup, Buffer};

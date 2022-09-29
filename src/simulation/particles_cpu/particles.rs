@@ -4,10 +4,11 @@ use crate::{
     graphics::gpu_interface::GPUInterface,
     graphics::instance::Instance,
     graphics::model::ColoredMesh,
-    simulation::generator::Generator,
-    simulation::obstacle::Obstacle,
     gui,
 };
+
+use super::generator::Generator;
+use super::obstacle::Obstacle;
 
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 use std::{ops::Range, time::Duration};

@@ -26,7 +26,7 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    simulation_state: simulation::particles::Simulation,
+    simulation_state: simulation::particles_cpu::particles::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -52,7 +52,7 @@ impl State {
 
         let obstacle = forms::get_cube_kilter(&gpu.device, [0.9, 0.1, 0.1]);
 
-        let simulation_state = simulation::particles::Simulation::new(&obstacle);
+        let simulation_state = simulation::particles_cpu::particles::Simulation::new(&obstacle);
 
         let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
