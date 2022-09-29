@@ -212,6 +212,7 @@ pub fn run() {
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
     // TODO we'll want to define some particles UI and create it here to pass in.
+    let mut particles_ui = gui::particles_gui::ParticlesUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -224,12 +225,20 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                // TODO sync state from UI.
+                state.simulation_state.sync_sim_config_from_ui(&mut particles_ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                // TODO get some gui_render_command_buffer once we add UI.
+                let gui_render_command_buffer = gui.render(
+                    &mut particles_ui,
+                    frame_time,
+                    &state.gpu.device,
+                    &state.gpu.config,
+                    &state.gpu.queue,
+                    &window,
+                    &output
+                );
 
-                state.gpu.queue.submit([simulation_render_command_buffer]);
+                state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
                 output.present();
             }
             Event::DeviceEvent {

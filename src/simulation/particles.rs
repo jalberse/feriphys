@@ -5,14 +5,14 @@ use rand::{self, Rng};
 use std::time::Duration;
 
 use crate::{
-    entity::Entity, forms, gpu_interface::GPUInterface, instance::Instance, model::ColoredMesh,
+    entity::Entity, forms, gpu_interface::GPUInterface, gui, instance::Instance, model::ColoredMesh,
 };
 
 // TODO Let's use 2500 as the max for when we add the GUI. We'll
 //    Keep that constant since it's used for some static instance buffer sizing.
 //    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 2000;
+pub const MAX_INSTANCES: usize = 100;
 
 const EPSILON: f32 = 0.001;
 
@@ -358,7 +358,7 @@ impl Default for Config {
                 z: 0.0,
             },
             wind: Vector3::<f32> {
-                x: 0.5,
+                x: 0.0,
                 y: 0.0,
                 z: 0.0,
             },
@@ -490,8 +490,13 @@ impl Simulation {
                 }
             };
 
-            particle.lifetime = std::time::Duration::ZERO
-                .max(particle.lifetime - std::time::Duration::from_secs_f32(self.config.dt));
+            particle.lifetime = match particle
+                .lifetime
+                .checked_sub(Duration::from_secs_f32(self.config.dt))
+            {
+                None => Duration::ZERO,
+                Some(duration) => duration,
+            };
         }
 
         std::time::Duration::from_secs_f32(self.config.dt)
@@ -541,5 +546,12 @@ impl Simulation {
 
     pub fn get_timestep(&self) -> std::time::Duration {
         std::time::Duration::from_secs_f32(self.config.dt)
+    }
+
+    pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles_gui::ParticlesUi) {
+        let ui_config_state = ui.get_gui_state_mut();
+        self.config.dt = ui_config_state.dt;
+        self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
+        self.config.wind = ui_config_state.wind;
     }
 }

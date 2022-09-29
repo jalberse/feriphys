@@ -4,6 +4,7 @@ use egui_winit_platform::{Platform, PlatformDescriptor};
 use winit::{event::Event, window::Window};
 
 pub mod bounce_gui;
+pub mod particles_gui;
 
 pub trait Ui {
     fn ui(&mut self, ctx: &egui::Context);
