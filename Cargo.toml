@@ -26,6 +26,8 @@ egui_winit_platform = "0.15"
 egui = "0.18"
 epi = "0.17"
 egui_wgpu_backend = "0.18"
+clap = { version = "3.2.22", features = [ "derive" ] }
+rand = "0.8.4"
 
 [build-dependencies]
 anyhow = "1.0"

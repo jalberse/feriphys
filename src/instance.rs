@@ -1,3 +1,8 @@
+use wgpu::Buffer;
+
+use crate::gpu_interface::GPUInterface;
+use wgpu::BufferDescriptor;
+
 /// Stores an instance's transformations.
 pub struct Instance {
     pub position: cgmath::Vector3<f32>,
@@ -75,6 +80,53 @@ impl InstanceRaw {
                     format: wgpu::VertexFormat::Float32x3,
                 },
             ],
+        }
+    }
+
+    /// Creates a buffer of InstanceRaw data from the instances,
+    /// and schedules a write to that buffer with the instance data.
+    pub fn create_buffer_from_vec(
+        gpu: &GPUInterface,
+        instances: &Vec<Instance>,
+        capacity: usize,
+    ) -> Buffer {
+        let buffer = gpu.device.create_buffer(&BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: capacity as u64 * std::mem::size_of::<InstanceRaw>() as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        // Note we don't need to declare buffer as mut because this only *schedules*
+        // an update to the buffer via Queue::write_buffer().
+        InstanceRaw::update_buffer_from_vec(&gpu, &buffer, &instances);
+        buffer
+    }
+
+    /// Updates the the instance buffer with the vector of instances,
+    /// started from the beginning of the buffer. Panics if the instances
+    /// vector is larger than the buffer.
+    /// Really, this only schedules a write to the buffer via gpu.queue.write_buffer().
+    /// The buffer is updated from 0..N where N is the number of instances. The remaining length of the buffer
+    /// remains untouched.
+    /// Useful for if all instances are likely to be updated each frame, such as in particle systems.
+    pub fn update_buffer_from_vec(gpu: &GPUInterface, buffer: &Buffer, instances: &Vec<Instance>) {
+        let instances_raw_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+
+        for (index, instance_data) in instances_raw_data.iter().enumerate() {
+            gpu.queue.write_buffer(
+                &buffer,
+                index as u64 * std::mem::size_of::<InstanceRaw>() as u64,
+                bytemuck::cast_slice(&[*instance_data]),
+            );
+        }
+    }
+}
+
+impl Default for InstanceRaw {
+    fn default() -> InstanceRaw {
+        InstanceRaw {
+            model: [[0.0; 4]; 4],
+            normal: [[0.0; 3]; 3],
         }
     }
 }

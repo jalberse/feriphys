@@ -1,6 +1,6 @@
 use crate::gui::bounce_gui;
 /// The bounce module contains the logic for a bouncing ball simulation.
-use cgmath::{InnerSpace, Zero};
+use cgmath::{InnerSpace, Vector3, Zero};
 
 const EPSILON: f32 = 0.001;
 
@@ -21,11 +21,7 @@ impl Config {
             dt: std::time::Duration::from_millis(1).as_secs_f32(),
             sphere_mass: 1.0,
             drag: 0.5,
-            wind: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            wind: Vector3::<f32>::zero(),
             acceleration_gravity: -10.0,
             coefficient_of_restitution: 0.95,
             coefficient_of_friction: 0.25,
@@ -146,16 +142,8 @@ impl State {
 
         let config = Config::default();
 
-        let position = cgmath::Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        let velocity = cgmath::Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
+        let position = Vector3::<f32>::zero();
+        let velocity = Vector3::<f32>::zero();
         State {
             planes,
             config,
