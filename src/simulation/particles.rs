@@ -111,7 +111,6 @@ impl Obstacle {
         dt: f32,
     ) -> Option<&Tri> {
         self.tris.iter().find(|tri| -> bool {
-            // TODO add preliminary check for bounding box.
             let old_distance_to_plane = tri.distance_from_plane(old_position);
             let new_distance_to_plane = tri.distance_from_plane(new_position);
             // If the signs are different, the point has crossed the plane
