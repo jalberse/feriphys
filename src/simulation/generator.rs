@@ -20,12 +20,13 @@ impl Generator {
         &mut self,
         position: Vector3<f32>,
         normal: Vector3<f32>,
+        radius: f32,
         pool: &mut ParticlePool,
         num_particles: u32,
         // Speed in direction of normal vector to spawn with.
         speed: Range<f32>,
         lifetime: Range<Duration>,
-        radius: f32,
+        mass: Range<f32>,
     ) {
         self.position = position;
         self.normal = normal;
@@ -49,13 +50,11 @@ impl Generator {
                 + self.normal * self.normal.dot(vec_in_plane) * (1.0 - f32::cos(angle));
             let gen_position = self.position + rotated_vec.normalize() * radius;
 
-            // TODO make the mass, range configurable. I guess we might pass some
-            //   particle config with min/max values.
             pool.create(
                 gen_position,
                 self.normal * rng.gen_range(speed.start..=speed.end),
                 rng.gen_range(lifetime.start..=lifetime.end),
-                rng.gen_range(0.9..1.1),
+                rng.gen_range(mass.start..=mass.end),
                 rng.gen_range(0.4..0.6),
             );
         }

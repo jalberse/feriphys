@@ -91,6 +91,20 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.particles_mass_mean,
+                    ParticlesUi::MIN_MASS..=ParticlesUi::MAX_MASS,
+                )
+                .text("Mass Mean"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.particles_mass_range,
+                    ParticlesUi::MIN_MASS_RANGE..=ParticlesUi::MAX_MASS_RANGE,
+                )
+                .text("Mass Range"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.generator_radius,
                     ParticlesUi::MIN_GENERATOR_RADIUS..=ParticlesUi::MAX_GENERATOR_RADIUS,
                 )
@@ -137,6 +151,11 @@ impl ParticlesUi {
     const MAX_SPEED: f32 = 50.0;
     const MIN_SPEED_RANGE: f32 = 0.0;
     const MAX_SPEED_RANGE: f32 = 50.0;
+
+    const MIN_MASS: f32 = 0.0;
+    const MAX_MASS: f32 = 10.0;
+    const MIN_MASS_RANGE: f32 = 0.0;
+    const MAX_MASS_RANGE: f32 = 10.0;
 
     // TODO we'll apply these as a min/max range for particle generation
     // This range would actually be the bounds for a min/max we set ourselves... Confusing lol
