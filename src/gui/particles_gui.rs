@@ -19,6 +19,14 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.particles_generated_per_step,
+                    ParticlesUi::MIN_PARTICLES_GENERATED_PER_STEP
+                        ..=ParticlesUi::MAX_PARTICLES_GENRATED_PER_STEP,
+                )
+                .text("Particles Generated Per Step"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.acceleration_gravity.x,
                     ParticlesUi::ACCELERATION_GRAVITY_MIN..=ParticlesUi::ACCELERATION_GRAVITY_MAX,
                 )
@@ -152,6 +160,9 @@ impl Ui for ParticlesUi {
 impl ParticlesUi {
     const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
     const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
+
+    const MIN_PARTICLES_GENERATED_PER_STEP: u32 = 0;
+    const MAX_PARTICLES_GENRATED_PER_STEP: u32 = 40;
 
     const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
     const ACCELERATION_GRAVITY_MAX: f32 = 20.0;

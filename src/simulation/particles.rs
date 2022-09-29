@@ -8,11 +8,7 @@ use crate::{
 
 use super::particle::ParticlePool;
 
-// TODO Let's use 2500 as the max for when we add the GUI. We'll
-//    Keep that constant since it's used for some static instance buffer sizing.
-//    But our range will be 0..MAX_INSTANCES for particles.
-//   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 250000;
+pub const MAX_INSTANCES: usize = 5000;
 
 const EPSILON: f32 = 0.001;
 
@@ -296,6 +292,7 @@ impl Simulation {
     pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles_gui::ParticlesUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.dt = ui_config_state.dt;
+        self.config.particles_generated_per_step = ui_config_state.particles_generated_per_step;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
         self.config.particles_lifetime_mean = ui_config_state.particles_lifetime_mean;
