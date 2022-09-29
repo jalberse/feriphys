@@ -18,8 +18,6 @@ pub const MAX_INSTANCES: usize = 2000;
 const EPSILON: f32 = 0.001;
 
 /// TODO:
-/// Add GUI for moving generator, changing config, etc...
-///
 /// We should add colors to our particles. We can do that by adding color information to IntanceRaw,
 /// and handling that in the shader instead of using our colored mesh's color. The colored mesh color
 /// will only be used to inform the default instance color.
@@ -143,9 +141,6 @@ impl Simulation {
             // Euler integration to get the new location
             let new_position = original_position + self.config.dt * original_velocity;
             let new_velocity = original_velocity + self.config.dt * acceleration;
-
-            // TODO here, check for collisions with the tris. Set new_position and new_velocity accordingly.
-            //  Similar to ball collision code, but no partial timestep.
 
             let collided_tri_maybe = if self.obstacle.in_bounds(&new_position) {
                 self.obstacle.get_collided_tri(
