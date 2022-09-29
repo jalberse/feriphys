@@ -80,7 +80,7 @@ pub fn create_colored_mesh_render_pipeline(
         });
     let shader = wgpu::ShaderModuleDescriptor {
         label: Some("Colored Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("color_shader.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(include_str!("shaders/color_shader.wgsl").into()),
     };
     create_render_pipeline(
         &gpu.device,
