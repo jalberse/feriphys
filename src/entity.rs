@@ -5,7 +5,6 @@ use crate::model::ColoredMesh;
 use crate::model::DrawColoredMesh;
 use crate::simulation::particles::MAX_INSTANCES;
 
-use arrayvec::ArrayVec;
 use cgmath::EuclideanSpace;
 use cgmath::InnerSpace;
 use cgmath::Vector3;
@@ -18,17 +17,13 @@ use wgpu::Buffer;
 
 pub struct Entity {
     mesh: ColoredMesh,
-    instances: ArrayVec<Instance, MAX_INSTANCES>,
+    instances: Vec<Instance>,
     instance_buffer: Buffer,
 }
 
 impl Entity {
-    pub fn new(
-        gpu: &GPUInterface,
-        mesh: ColoredMesh,
-        instances: ArrayVec<Instance, MAX_INSTANCES>,
-    ) -> Entity {
-        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances);
+    pub fn new(gpu: &GPUInterface, mesh: ColoredMesh, instances: Vec<Instance>) -> Entity {
+        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances, MAX_INSTANCES);
 
         Entity {
             mesh,
@@ -56,11 +51,7 @@ impl Entity {
         );
     }
 
-    pub fn update_instances(
-        &mut self,
-        gpu: &GPUInterface,
-        instances: ArrayVec<Instance, MAX_INSTANCES>,
-    ) {
+    pub fn update_instances(&mut self, gpu: &GPUInterface, instances: Vec<Instance>) {
         self.instances = instances;
         InstanceRaw::update_buffer_from_vec(gpu, &self.instance_buffer, &self.instances);
     }

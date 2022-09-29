@@ -8,11 +8,9 @@ use crate::light;
 use crate::rendering;
 use crate::scene::Scene;
 use crate::simulation;
-use crate::simulation::particles::MAX_INSTANCES;
 use crate::texture;
 use crate::{gui, utilities};
 
-use arrayvec::ArrayVec;
 use cgmath::Rotation3;
 use cgmath::Vector3;
 use cgmath::Zero;
@@ -57,7 +55,7 @@ impl State {
 
         let simulation_state = simulation::particles::Simulation::new(&obstacle);
 
-        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
+        let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
             position: Vector3::<f32>::zero(),
             rotation: cgmath::Quaternion::from_axis_angle(

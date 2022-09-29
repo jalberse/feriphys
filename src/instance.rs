@@ -1,7 +1,7 @@
-use wgpu::util::DeviceExt;
 use wgpu::Buffer;
 
 use crate::gpu_interface::GPUInterface;
+use wgpu::BufferDescriptor;
 
 /// Stores an instance's transformations.
 pub struct Instance {
@@ -85,21 +85,20 @@ impl InstanceRaw {
 
     /// Creates a buffer of InstanceRaw data from the instances,
     /// and schedules a write to that buffer with the instance data.
-    pub fn create_buffer_from_vec<const NUM_INSTANCES: usize>(
+    pub fn create_buffer_from_vec(
         gpu: &GPUInterface,
-        instances: &arrayvec::ArrayVec<Instance, NUM_INSTANCES>,
+        instances: &Vec<Instance>,
+        capacity: usize,
     ) -> Buffer {
-        let zeroed_raw_instance_array = [InstanceRaw::default(); NUM_INSTANCES];
-        let buffer = gpu
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Dynamic Instance Buffer"),
-                contents: bytemuck::cast_slice(&zeroed_raw_instance_array),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
+        let buffer = gpu.device.create_buffer(&BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: capacity as u64 * std::mem::size_of::<InstanceRaw>() as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
         // Note we don't need to declare buffer as mut because this only *schedules*
         // an update to the buffer via Queue::write_buffer().
-        InstanceRaw::update_buffer_from_vec::<NUM_INSTANCES>(&gpu, &buffer, &instances);
+        InstanceRaw::update_buffer_from_vec(&gpu, &buffer, &instances);
         buffer
     }
 
@@ -110,11 +109,7 @@ impl InstanceRaw {
     /// The buffer is updated from 0..N where N is the number of instances. The remaining length of the buffer
     /// remains untouched.
     /// Useful for if all instances are likely to be updated each frame, such as in particle systems.
-    pub fn update_buffer_from_vec<const NUM_INSTANCES: usize>(
-        gpu: &GPUInterface,
-        buffer: &Buffer,
-        instances: &arrayvec::ArrayVec<Instance, NUM_INSTANCES>,
-    ) {
+    pub fn update_buffer_from_vec(gpu: &GPUInterface, buffer: &Buffer, instances: &Vec<Instance>) {
         let instances_raw_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
 
         for (index, instance_data) in instances_raw_data.iter().enumerate() {

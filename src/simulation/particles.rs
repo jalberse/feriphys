@@ -1,4 +1,3 @@
-use arrayvec::ArrayVec;
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 use std::{ops::Range, time::Duration};
 
@@ -13,7 +12,7 @@ use super::particle::ParticlePool;
 //    Keep that constant since it's used for some static instance buffer sizing.
 //    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 2000;
+pub const MAX_INSTANCES: usize = 10000;
 
 const EPSILON: f32 = 0.001;
 
@@ -251,7 +250,7 @@ impl Simulation {
     pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
-        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
+        let mut instances = Vec::<Instance>::new();
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {
                 continue;
@@ -271,8 +270,8 @@ impl Simulation {
         Entity::new(&gpu, mesh, instances)
     }
 
-    pub fn get_particles_instances(&self) -> ArrayVec<Instance, MAX_INSTANCES> {
-        let mut instances = ArrayVec::<Instance, MAX_INSTANCES>::new();
+    pub fn get_particles_instances(&self) -> Vec<Instance> {
+        let mut instances = Vec::<Instance>::new();
 
         for particle in self.particles.particles.iter() {
             if !particle.in_use() {

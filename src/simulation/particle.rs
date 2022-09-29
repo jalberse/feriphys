@@ -16,6 +16,8 @@ impl ParticlePool {
 
     /// Activates a particle in the pool and initializes to values.
     /// If there are no free particles in the pool, does nothing.
+    /// Note that this means that we shouldn't overflow the instance buffer ever, since
+    /// the pool is made with a size that fits within the buffer!
     /// TODO: Use a free list instead of searching for first unused particle.
     pub fn create(
         &mut self,

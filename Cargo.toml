@@ -27,7 +27,6 @@ egui = "0.18"
 epi = "0.17"
 egui_wgpu_backend = "0.18"
 clap = { version = "3.2.22", features = [ "derive" ] }
-arrayvec = "0.7.2"
 rand = "0.8.4"
 
 [build-dependencies]

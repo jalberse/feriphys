@@ -1,9 +1,6 @@
 use crate::entity::Entity;
 use crate::gpu_interface::GPUInterface;
 use crate::instance::Instance;
-use crate::simulation::particles::MAX_INSTANCES;
-
-use arrayvec::ArrayVec;
 use wgpu::BindGroup;
 
 pub struct Scene {
@@ -42,11 +39,7 @@ impl Scene {
             .draw(render_pass, camera_bind_group, light_bind_group);
     }
 
-    pub fn update_particle_locations(
-        &mut self,
-        gpu: &GPUInterface,
-        instances: ArrayVec<Instance, MAX_INSTANCES>,
-    ) {
+    pub fn update_particle_locations(&mut self, gpu: &GPUInterface, instances: Vec<Instance>) {
         self.particles.update_instances(gpu, instances);
     }
 }
