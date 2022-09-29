@@ -29,7 +29,8 @@ const EPSILON: f32 = 0.001;
 pub struct Config {
     pub dt: f32, // secs as f32
     pub particles_generated_per_step: u32,
-    pub particles_lifetime: f32, // secs as f32
+    pub particles_lifetime_mean: f32, // secs as f32
+    pub particles_lifetime_range: f32,
     pub particles_initial_speed_mean: f32,
     pub particles_initial_speed_range: f32,
     pub acceleration_gravity: Vector3<f32>,
@@ -44,7 +45,8 @@ impl Default for Config {
         Self {
             dt: Duration::from_millis(1).as_secs_f32(),
             particles_generated_per_step: 1,
-            particles_lifetime: Duration::from_secs(5).as_secs_f32(),
+            particles_lifetime_mean: Duration::from_secs(5).as_secs_f32(),
+            particles_lifetime_range: Duration::ZERO.as_secs_f32(),
             particles_initial_speed_mean: 1.0,
             particles_initial_speed_range: 0.1,
             acceleration_gravity: Vector3::<f32> {
@@ -109,6 +111,17 @@ impl Simulation {
         //   Then add a slider for range around that mean, and pass that in here instead of having same value for every particle.
         //   Ensure we clamp the ranges as appropriate.
         // TODO then do the same for the mass and drag of the particles, which are just hardcoded ranges right now.
+        let min_lifetime = match Duration::from_secs_f32(self.config.particles_lifetime_mean)
+            .checked_sub(Duration::from_secs_f32(
+                self.config.particles_lifetime_range,
+            )) {
+            None => Duration::ZERO,
+            Some(time) => time,
+        };
+        let max_lifetime = Duration::from_secs_f32(
+            self.config.particles_lifetime_mean + self.config.particles_lifetime_range,
+        );
+
         self.generator.generate_particles(
             self.config.generator_position,
             self.config.generator_normal,
@@ -120,7 +133,10 @@ impl Simulation {
                 end: (self.config.particles_initial_speed_mean
                     + self.config.particles_initial_speed_range),
             },
-            Duration::from_secs_f32(self.config.particles_lifetime),
+            Range {
+                start: min_lifetime,
+                end: max_lifetime,
+            },
             self.config.generator_radius,
         );
 
@@ -264,7 +280,8 @@ impl Simulation {
         self.config.dt = ui_config_state.dt;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
-        self.config.particles_lifetime = ui_config_state.particles_lifetime;
+        self.config.particles_lifetime_mean = ui_config_state.particles_lifetime_mean;
+        self.config.particles_lifetime_range = ui_config_state.particles_lifetime_range;
         self.config.particles_initial_speed_mean = ui_config_state.particles_initial_speed_mean;
         self.config.particles_initial_speed_range = ui_config_state.particles_initial_speed_range;
         self.config.generator_radius = ui_config_state.generator_radius;

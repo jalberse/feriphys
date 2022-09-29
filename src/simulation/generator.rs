@@ -24,7 +24,7 @@ impl Generator {
         num_particles: u32,
         // Speed in direction of normal vector to spawn with.
         speed: Range<f32>,
-        lifetime: Duration,
+        lifetime: Range<Duration>,
         radius: f32,
     ) {
         self.position = position;
@@ -54,7 +54,7 @@ impl Generator {
             pool.create(
                 gen_position,
                 self.normal * rng.gen_range(speed.start..=speed.end),
-                lifetime,
+                rng.gen_range(lifetime.start..=lifetime.end),
                 rng.gen_range(0.9..1.1),
                 rng.gen_range(0.4..0.6),
             );

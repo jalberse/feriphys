@@ -61,11 +61,19 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
-                    &mut self.sim_config.particles_lifetime,
+                    &mut self.sim_config.particles_lifetime_mean,
                     ParticlesUi::MIN_LIFETIME.as_secs_f32()
                         ..=ParticlesUi::MAX_LIFETIME.as_secs_f32(),
                 )
-                .text("Lifetime"),
+                .text("Lifetime Mean"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.particles_lifetime_range,
+                    ParticlesUi::MIN_LIFETIME_RANGE.as_secs_f32()
+                        ..=ParticlesUi::MAX_LIFETIME_RANGE.as_secs_f32(),
+                )
+                .text("Lifetime Range"),
             );
             ui.add(
                 Slider::new(
@@ -122,6 +130,8 @@ impl ParticlesUi {
 
     const MIN_LIFETIME: std::time::Duration = std::time::Duration::from_secs(1);
     const MAX_LIFETIME: std::time::Duration = std::time::Duration::from_secs(10);
+    const MIN_LIFETIME_RANGE: std::time::Duration = std::time::Duration::ZERO;
+    const MAX_LIFETIME_RANGE: std::time::Duration = std::time::Duration::from_secs(5);
 
     const MIN_SPEED: f32 = 0.0;
     const MAX_SPEED: f32 = 50.0;
