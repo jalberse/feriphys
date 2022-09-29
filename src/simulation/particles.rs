@@ -1,10 +1,10 @@
-use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
-use std::{ops::Range, time::Duration};
-
 use crate::{
     entity::Entity, forms, gpu_interface::GPUInterface, gui, instance::Instance,
     model::ColoredMesh, simulation::generator::Generator, simulation::obstacle::Obstacle,
 };
+
+use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
+use std::{ops::Range, time::Duration};
 
 use super::particle::ParticlePool;
 

@@ -1,5 +1,6 @@
 use crate::gui::Ui;
 use crate::simulation::bounce;
+
 use egui::Slider;
 
 pub struct BouncingBallUi {

@@ -1,10 +1,8 @@
 use super::model;
 use super::texture;
 
-use std::io::BufReader;
-use std::io::Cursor;
+use std::io::{BufReader, Cursor};
 use wgpu::util::DeviceExt;
-
 use tobj;
 
 pub fn load_string(file_name: &str) -> anyhow::Result<String> {

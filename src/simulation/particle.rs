@@ -1,8 +1,8 @@
-use std::time::Duration;
+use super::particles::MAX_INSTANCES;
 
 use cgmath::{Vector3, Zero};
 
-use super::particles::MAX_INSTANCES;
+use std::time::Duration;
 
 pub struct ParticlePool {
     pub particles: Vec<Particle>,

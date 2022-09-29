@@ -1,7 +1,6 @@
-use cgmath::Vector3;
-
 use super::texture;
 
+use cgmath::Vector3;
 use core::ops::Range;
 
 pub trait Vertex {

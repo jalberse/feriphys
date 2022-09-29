@@ -1,5 +1,6 @@
 use crate::gui::Ui;
 use crate::simulation::particles;
+
 use egui::Slider;
 
 pub struct ParticlesUi {

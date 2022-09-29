@@ -1,9 +1,9 @@
-use std::{ops::Range, time::Duration};
+use super::particle::ParticlePool;
 
 use cgmath::{InnerSpace, Vector3};
 use rand::Rng;
 
-use super::particle::ParticlePool;
+use std::{ops::Range, time::Duration};
 
 // TODO we don't really need the Struct now - consider removing and making this a pure fn.
 

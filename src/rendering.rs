@@ -1,9 +1,15 @@
 use wgpu::{BindGroupLayout, RenderPipeline};
 
-use crate::instance;
-use crate::model::{ColoredVertex, Vertex};
-use crate::texture;
-use crate::{camera::CameraBundle, gpu_interface::GPUInterface};
+use crate::{
+    model::{
+        ColoredVertex,
+        Vertex
+    },
+    instance,
+    texture,
+    camera::CameraBundle,
+    gpu_interface::GPUInterface
+};
 
 pub fn create_render_pipeline(
     device: &wgpu::Device,

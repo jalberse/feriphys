@@ -1,7 +1,7 @@
+use crate::model::ColoredMesh;
+
 use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;
-
-use crate::model::ColoredMesh;
 
 pub struct Tri {
     v1: Vector3<f32>,

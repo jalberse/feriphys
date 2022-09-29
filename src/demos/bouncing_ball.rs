@@ -10,6 +10,7 @@ use crate::resources;
 use crate::simulation;
 use crate::texture;
 use crate::utilities;
+
 use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::{

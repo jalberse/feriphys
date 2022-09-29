@@ -1,8 +1,6 @@
 use crate::gpu_interface::GPUInterface;
 
-use wgpu::util::DeviceExt;
-use wgpu::BindGroup;
-use wgpu::BindGroupLayout;
+use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

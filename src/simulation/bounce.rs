@@ -1,5 +1,6 @@
-use crate::gui::bounce_gui;
 /// The bounce module contains the logic for a bouncing ball simulation.
+use crate::gui::bounce_gui;
+
 use cgmath::{InnerSpace, Vector3, Zero};
 
 const EPSILON: f32 = 0.001;

@@ -5,11 +5,8 @@ use crate::model::ColoredMesh;
 use crate::model::DrawColoredMesh;
 use crate::simulation::particles::MAX_INSTANCES;
 
-use cgmath::EuclideanSpace;
-use cgmath::InnerSpace;
-use cgmath::Vector3;
-use wgpu::BindGroup;
-use wgpu::Buffer;
+use cgmath::{EuclideanSpace, InnerSpace, Vector3};
+use wgpu::{BindGroup, Buffer};
 
 // TODO If we were to make our instancing system more robust, we would have a strategy for letting
 //    the instance buffer grow and shrink, creating new larger/smaller instance buffers as needed.

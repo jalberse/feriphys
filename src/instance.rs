@@ -1,7 +1,6 @@
-use wgpu::Buffer;
-
 use crate::gpu_interface::GPUInterface;
-use wgpu::BufferDescriptor;
+
+use wgpu::{Buffer, BufferDescriptor};
 
 /// Stores an instance's transformations.
 pub struct Instance {
