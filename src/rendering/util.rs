@@ -1,5 +1,7 @@
 use wgpu::{BindGroupLayout, RenderPipeline};
 
+// TODO we should ahve a rendering module. This file can be renamed to util.rs in there.
+
 use crate::{
     model::{
         ColoredVertex,
@@ -86,7 +88,7 @@ pub fn create_colored_mesh_render_pipeline(
         });
     let shader = wgpu::ShaderModuleDescriptor {
         label: Some("Colored Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("shaders/color_shader.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/color_shader.wgsl").into()),
     };
     create_render_pipeline(
         &gpu.device,

@@ -44,7 +44,7 @@ impl State {
         let (light_bind_group_layout, light_bind_group) =
             light::create_light_bind_group(&gpu, light_uniform);
 
-        let render_pipeline = rendering::create_colored_mesh_render_pipeline(
+        let render_pipeline = rendering::util::create_colored_mesh_render_pipeline(
             &gpu,
             &camera_bundle,
             &light_bind_group_layout,

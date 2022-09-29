@@ -58,7 +58,7 @@ impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
 
-        let texture_bind_group_layout = rendering::create_texture_bind_group_layout(&gpu);
+        let texture_bind_group_layout = rendering::util::create_texture_bind_group_layout(&gpu);
 
         let camera_bundle = CameraBundle::new(&gpu);
 
@@ -87,7 +87,7 @@ impl State {
                 label: Some("Normal Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/shader.wgsl").into()),
             };
-            rendering::create_render_pipeline(
+            rendering::util::create_render_pipeline(
                 &gpu.device,
                 &render_pipeline_layout,
                 gpu.config.format,
@@ -113,7 +113,7 @@ impl State {
                 label: Some("Light Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/light.wgsl").into()),
             };
-            rendering::create_render_pipeline(
+            rendering::util::create_render_pipeline(
                 &gpu.device,
                 &layout,
                 gpu.config.format,
@@ -124,7 +124,7 @@ impl State {
         };
 
         // Render pipeline for colored meshes without any textures.
-        let colored_render_pipeline = rendering::create_colored_mesh_render_pipeline(
+        let colored_render_pipeline = rendering::util::create_colored_mesh_render_pipeline(
             &gpu,
             &camera_bundle,
             &light_bind_group_layout,
