@@ -13,7 +13,7 @@ use super::particle::ParticlePool;
 //    Keep that constant since it's used for some static instance buffer sizing.
 //    But our range will be 0..MAX_INSTANCES for particles.
 //   For now, I'm lowering while we develop the simulation further.
-pub const MAX_INSTANCES: usize = 100;
+pub const MAX_INSTANCES: usize = 2000;
 
 const EPSILON: f32 = 0.001;
 
@@ -105,9 +105,10 @@ impl Simulation {
         //   Right now we just get to max very quickly, so it generates in waves.
 
         // For all of these, we can do this in UI by a center of range, and range from that. We'll call it *_mean and *_range.
-        // TODO we can pass a range here to set range of e.g. drag, mass for particles.
-        // TODO pass in speed and radius (from config, that is)
-        // TOOD pass in position, normal of generator. I guess it can update the generator's postion and normal.
+        // TODO For speed and lifetime, change the UI to the "mean" of those values.
+        //   Then add a slider for range around that mean, and pass that in here instead of having same value for every particle.
+        //   Ensure we clamp the ranges as appropriate.
+        // TODO then do the same for the mass and drag of the particles, which are just hardcoded ranges right now.
         self.generator.generate_particles(
             self.config.generator_position,
             self.config.generator_normal,
@@ -262,6 +263,7 @@ impl Simulation {
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
         self.config.particles_lifetime = ui_config_state.particles_lifetime;
+        self.config.particles_initial_speed = ui_config_state.particles_initial_speed;
         self.config.generator_radius = ui_config_state.generator_radius;
         self.config.generator_position = ui_config_state.generator_position;
         self.config.generator_normal = ui_config_state.generator_normal;
