@@ -31,7 +31,7 @@ const EPSILON: f32 = 0.001;
 pub struct Config {
     pub dt: f32, // secs as f32
     pub particles_generated_per_step: u32,
-    pub particles_lifetime: Duration,
+    pub particles_lifetime: f32, // secs as f32
     pub particles_initial_speed: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
@@ -42,7 +42,7 @@ impl Default for Config {
         Self {
             dt: Duration::from_millis(1).as_secs_f32(),
             particles_generated_per_step: 1,
-            particles_lifetime: Duration::from_secs(5),
+            particles_lifetime: Duration::from_secs(5).as_secs_f32(),
             particles_initial_speed: 1.0,
             acceleration_gravity: Vector3::<f32> {
                 x: 0.0,
@@ -95,11 +95,17 @@ impl Simulation {
     }
 
     pub fn step(&mut self) -> std::time::Duration {
+        // TODO we want a way to generate fewer particles, maybe tying it "number generated per second".
+        //   Right now we just get to max very quickly, so it generates in waves.
+
+        // TODO we can pass a range here to set range of e.g. drag, mass for particles.
+        // TODO pass in speed and radius (from config, that is)
+        // TOOD pass in position, normal of generator. I guess it can update the generator's postion and normal.
         self.generator.generate_particles(
             &mut self.particles,
             self.config.particles_generated_per_step,
             self.config.particles_initial_speed,
-            self.config.particles_lifetime,
+            Duration::from_secs_f32(self.config.particles_lifetime),
         );
 
         for particle in self.particles.particles.iter_mut() {
@@ -245,5 +251,6 @@ impl Simulation {
         self.config.dt = ui_config_state.dt;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
+        self.config.particles_lifetime = ui_config_state.particles_lifetime;
     }
 }

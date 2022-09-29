@@ -59,6 +59,14 @@ impl Ui for ParticlesUi {
                 )
                 .text("Wind Z"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.particles_lifetime,
+                    ParticlesUi::MIN_LIFETIME.as_secs_f32()
+                        ..=ParticlesUi::MAX_LIFETIME.as_secs_f32(),
+                )
+                .text("Lifetime"),
+            );
         });
     }
 }
@@ -69,6 +77,9 @@ impl ParticlesUi {
 
     const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
     const ACCELERATION_GRAVITY_MAX: f32 = 20.0;
+
+    const MIN_LIFETIME: std::time::Duration = std::time::Duration::from_secs(1);
+    const MAX_LIFETIME: std::time::Duration = std::time::Duration::from_secs(10);
 
     // TODO we'll apply these as a min/max range for particle generation
     // This range would actually be the bounds for a min/max we set ourselves... Confusing lol
