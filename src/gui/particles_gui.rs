@@ -67,6 +67,13 @@ impl Ui for ParticlesUi {
                 )
                 .text("Lifetime"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.generator_radius,
+                    ParticlesUi::MIN_GENERATOR_RADIUS..=ParticlesUi::MAX_GENERATOR_RADIUS,
+                )
+                .text("Generator Radius"),
+            );
         });
     }
 }
@@ -88,6 +95,9 @@ impl ParticlesUi {
 
     const MIN_WIND: f32 = -5.0;
     const MAX_WIND: f32 = 5.0;
+
+    const MIN_GENERATOR_RADIUS: f32 = 0.1;
+    const MAX_GENERATOR_RADIUS: f32 = 10.0;
 
     pub fn new() -> ParticlesUi {
         ParticlesUi {

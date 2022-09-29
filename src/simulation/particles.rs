@@ -35,6 +35,7 @@ pub struct Config {
     pub particles_initial_speed: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
+    pub generator_radius: f32,
 }
 
 impl Default for Config {
@@ -54,6 +55,7 @@ impl Default for Config {
                 y: 0.0,
                 z: 0.0,
             },
+            generator_radius: 1.0,
         }
     }
 }
@@ -98,6 +100,7 @@ impl Simulation {
         // TODO we want a way to generate fewer particles, maybe tying it "number generated per second".
         //   Right now we just get to max very quickly, so it generates in waves.
 
+        // For all of these, we can do this in UI by a center of range, and range from that. We'll call it *_mean and *_range.
         // TODO we can pass a range here to set range of e.g. drag, mass for particles.
         // TODO pass in speed and radius (from config, that is)
         // TOOD pass in position, normal of generator. I guess it can update the generator's postion and normal.
@@ -106,6 +109,7 @@ impl Simulation {
             self.config.particles_generated_per_step,
             self.config.particles_initial_speed,
             Duration::from_secs_f32(self.config.particles_lifetime),
+            self.config.generator_radius,
         );
 
         for particle in self.particles.particles.iter_mut() {
@@ -252,5 +256,6 @@ impl Simulation {
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
         self.config.particles_lifetime = ui_config_state.particles_lifetime;
+        self.config.generator_radius = ui_config_state.generator_radius;
     }
 }

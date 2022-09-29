@@ -21,6 +21,7 @@ impl Generator {
         // Speed in direction of normal vector to spawn with.
         speed: f32,
         lifetime: Duration,
+        radius: f32,
     ) {
         let mut rng = rand::thread_rng();
 
@@ -34,7 +35,7 @@ impl Generator {
         let vec_in_plane = self.normal.cross(non_parallel_vec).normalize();
         for _ in 0..num_particles {
             let angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
-            let radius: f32 = 1.0 - rng.gen::<f32>().powi(2);
+            let radius: f32 = (1.0 - rng.gen::<f32>() * radius.powi(2)) * radius;
 
             let rotated_vec = vec_in_plane * f32::cos(angle)
                 + self.normal.cross(vec_in_plane) * f32::sin(angle)
