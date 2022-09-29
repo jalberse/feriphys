@@ -74,6 +74,27 @@ impl Ui for ParticlesUi {
                 )
                 .text("Generator Radius"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.generator_position.x,
+                    ParticlesUi::MIN_GENERATOR_POSITION..=ParticlesUi::MAX_GENERATOR_POSITION,
+                )
+                .text("Generator X"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.generator_position.y,
+                    ParticlesUi::MIN_GENERATOR_POSITION..=ParticlesUi::MAX_GENERATOR_POSITION,
+                )
+                .text("Generator Y"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.generator_position.z,
+                    ParticlesUi::MIN_GENERATOR_POSITION..=ParticlesUi::MAX_GENERATOR_POSITION,
+                )
+                .text("Generator Z"),
+            );
         });
     }
 }
@@ -98,6 +119,9 @@ impl ParticlesUi {
 
     const MIN_GENERATOR_RADIUS: f32 = 0.1;
     const MAX_GENERATOR_RADIUS: f32 = 10.0;
+
+    const MIN_GENERATOR_POSITION: f32 = -5.0;
+    const MAX_GENERATOR_POSITION: f32 = 5.0;
 
     pub fn new() -> ParticlesUi {
         ParticlesUi {

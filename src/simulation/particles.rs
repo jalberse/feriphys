@@ -36,6 +36,8 @@ pub struct Config {
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
     pub generator_radius: f32,
+    pub generator_position: Vector3<f32>,
+    pub generator_normal: Vector3<f32>,
 }
 
 impl Default for Config {
@@ -56,6 +58,8 @@ impl Default for Config {
                 z: 0.0,
             },
             generator_radius: 1.0,
+            generator_position: Vector3::<f32>::unit_y() * 2.0,
+            generator_normal: Vector3::<f32>::unit_y(),
         }
     }
 }
@@ -105,6 +109,8 @@ impl Simulation {
         // TODO pass in speed and radius (from config, that is)
         // TOOD pass in position, normal of generator. I guess it can update the generator's postion and normal.
         self.generator.generate_particles(
+            self.config.generator_position,
+            self.config.generator_normal,
             &mut self.particles,
             self.config.particles_generated_per_step,
             self.config.particles_initial_speed,
@@ -257,5 +263,7 @@ impl Simulation {
         self.config.wind = ui_config_state.wind;
         self.config.particles_lifetime = ui_config_state.particles_lifetime;
         self.config.generator_radius = ui_config_state.generator_radius;
+        self.config.generator_position = ui_config_state.generator_position;
+        self.config.generator_normal = ui_config_state.generator_normal;
     }
 }

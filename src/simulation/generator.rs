@@ -5,6 +5,8 @@ use rand::Rng;
 
 use super::particle::ParticlePool;
 
+// TODO we don't really need the Struct now - consider removing and making this a pure fn.
+
 /// Generates particles in the plane defined by position, normal.
 pub struct Generator {
     pub position: Vector3<f32>,
@@ -15,7 +17,9 @@ impl Generator {
     // Generates particles in a uniform distribution with
     // zero initial velocity.
     pub fn generate_particles(
-        &self,
+        &mut self,
+        position: Vector3<f32>,
+        normal: Vector3<f32>,
         pool: &mut ParticlePool,
         num_particles: u32,
         // Speed in direction of normal vector to spawn with.
@@ -23,6 +27,9 @@ impl Generator {
         lifetime: Duration,
         radius: f32,
     ) {
+        self.position = position;
+        self.normal = normal;
+
         let mut rng = rand::thread_rng();
 
         let non_parallel_vec =
