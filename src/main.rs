@@ -11,6 +11,6 @@ fn main() {
     let args = FeriphysArgs::parse();
     match args.demo {
         Demos::BouncingBall => demos::bouncing_ball::run(),
-        Demos::Particles => demos::particles_cpu::run(),
+        Demos::ParticlesCpu => demos::particles_cpu::run(),
     }
 }

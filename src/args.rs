@@ -3,7 +3,7 @@ use clap::{Parser, ValueEnum};
 #[derive(ValueEnum, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Demos {
     BouncingBall,
-    Particles,
+    ParticlesCpu,
 }
 
 #[derive(Parser)]
