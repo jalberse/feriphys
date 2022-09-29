@@ -1,6 +1,6 @@
-use crate::entity::Entity;
-use crate::gpu_interface::GPUInterface;
-use crate::instance::Instance;
+use crate::graphics::entity::Entity;
+use crate::graphics::gpu_interface::GPUInterface;
+use crate::graphics::instance::Instance;
 use wgpu::BindGroup;
 
 pub struct Scene {

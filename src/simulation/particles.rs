@@ -1,6 +1,12 @@
 use crate::{
-    entity::Entity, forms, gpu_interface::GPUInterface, gui, instance::Instance,
-    model::ColoredMesh, simulation::generator::Generator, simulation::obstacle::Obstacle,
+    graphics::entity::Entity,
+    graphics::forms,
+    graphics::gpu_interface::GPUInterface,
+    graphics::instance::Instance,
+    graphics::model::ColoredMesh,
+    simulation::generator::Generator,
+    simulation::obstacle::Obstacle,
+    gui,
 };
 
 use cgmath::{InnerSpace, Rotation3, Vector3, Zero};

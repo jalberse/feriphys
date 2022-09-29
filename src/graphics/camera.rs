@@ -1,5 +1,5 @@
 /// Basis for this code is from https://sotrh.github.io/learn-wgpu/intermediate/tutorial12-camera/
-use crate::gpu_interface::GPUInterface;
+use super::gpu_interface::GPUInterface;
 
 use cgmath::*;
 use std::f32::consts::FRAC_PI_2;

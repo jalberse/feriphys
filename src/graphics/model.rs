@@ -1,4 +1,4 @@
-use super::texture;
+use crate::graphics::texture;
 
 use cgmath::Vector3;
 use core::ops::Range;

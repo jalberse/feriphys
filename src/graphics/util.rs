@@ -1,17 +1,17 @@
 use wgpu::{BindGroupLayout, RenderPipeline};
 
-// TODO we should ahve a rendering module. This file can be renamed to util.rs in there.
-
 use crate::{
-    model::{
+    graphics::model::{
         ColoredVertex,
         Vertex
     },
-    instance,
-    texture,
-    camera::CameraBundle,
-    gpu_interface::GPUInterface
+    graphics::instance,
+    graphics::texture,
+    graphics::camera::CameraBundle,
+    graphics::gpu_interface::GPUInterface
 };
+
+use super::camera::Projection;
 
 pub fn create_render_pipeline(
     device: &wgpu::Device,
@@ -123,4 +123,22 @@ pub fn create_texture_bind_group_layout(gpu: &GPUInterface) -> BindGroupLayout {
             ],
             label: Some("texture_bind_group_layout"),
         })
+}
+
+pub fn resize(
+    new_size: winit::dpi::PhysicalSize<u32>,
+    gpu: &mut GPUInterface,
+    depth_texture: &mut texture::Texture,
+    projection: &mut Projection,
+) {
+    if new_size.width > 0 && new_size.height > 0 {
+        gpu.size = new_size;
+        gpu.config.width = new_size.width;
+        gpu.config.height = new_size.height;
+        gpu.surface.configure(&gpu.device, &gpu.config);
+        // depth_texture must be udpated *after* the config, to get new width and height.
+        *depth_texture =
+            texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth_texture");
+        projection.resize(new_size.width, new_size.height)
+    }
 }

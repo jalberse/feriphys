@@ -1,14 +1,14 @@
-use crate::camera::CameraBundle;
-use crate::entity::Entity;
-use crate::forms;
-use crate::gpu_interface::GPUInterface;
-use crate::instance::Instance;
-use crate::light;
-use crate::rendering;
-use crate::scene::Scene;
+use crate::graphics::camera::CameraBundle;
+use crate::graphics::entity::Entity;
+use crate::graphics::forms;
+use crate::graphics::gpu_interface::GPUInterface;
+use crate::graphics::instance::Instance;
+use crate::graphics;
+use crate::graphics::light;
+use crate::graphics::texture;
+use crate::graphics::scene::Scene;
 use crate::simulation;
-use crate::texture;
-use crate::{gui, utilities};
+use crate::gui;
 
 use cgmath::Rotation3;
 use cgmath::Vector3;
@@ -44,7 +44,7 @@ impl State {
         let (light_bind_group_layout, light_bind_group) =
             light::create_light_bind_group(&gpu, light_uniform);
 
-        let render_pipeline = rendering::util::create_colored_mesh_render_pipeline(
+        let render_pipeline = graphics::util::create_colored_mesh_render_pipeline(
             &gpu,
             &camera_bundle,
             &light_bind_group_layout,
@@ -86,7 +86,7 @@ impl State {
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        utilities::resize(
+        graphics::util::resize(
             new_size,
             &mut self.gpu,
             &mut self.depth_texture,

@@ -1,4 +1,4 @@
-use crate::gpu_interface::GPUInterface;
+use super::gpu_interface::GPUInterface;
 
 use wgpu::{Buffer, BufferDescriptor};
 

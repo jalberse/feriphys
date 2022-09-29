@@ -1,4 +1,4 @@
-use crate::model::ColoredMesh;
+use crate::graphics::model::ColoredMesh;
 
 use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;

@@ -1,15 +1,12 @@
-use crate::camera::CameraBundle;
-use crate::forms;
-use crate::gpu_interface::GPUInterface;
+use crate::graphics::forms;
+use crate::graphics::gpu_interface::GPUInterface;
 use crate::gui;
-use crate::instance::{Instance, InstanceRaw};
-use crate::light;
-use crate::model::{ColoredMesh, DrawColoredMesh, Model, ModelVertex, Vertex};
-use crate::rendering;
-use crate::resources;
+use crate::graphics::instance::{Instance, InstanceRaw};
+use crate::graphics;
+use crate::graphics::{light, texture, resources};
+use crate::graphics::camera::CameraBundle;
+use crate::graphics::model::{ColoredMesh, DrawColoredMesh, Model, ModelVertex, Vertex, DrawLight};
 use crate::simulation;
-use crate::texture;
-use crate::utilities;
 
 use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
@@ -58,7 +55,7 @@ impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
 
-        let texture_bind_group_layout = rendering::util::create_texture_bind_group_layout(&gpu);
+        let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
 
         let camera_bundle = CameraBundle::new(&gpu);
 
@@ -87,7 +84,7 @@ impl State {
                 label: Some("Normal Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/shader.wgsl").into()),
             };
-            rendering::util::create_render_pipeline(
+            graphics::util::create_render_pipeline(
                 &gpu.device,
                 &render_pipeline_layout,
                 gpu.config.format,
@@ -113,7 +110,7 @@ impl State {
                 label: Some("Light Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/light.wgsl").into()),
             };
-            rendering::util::create_render_pipeline(
+            graphics::util::create_render_pipeline(
                 &gpu.device,
                 &layout,
                 gpu.config.format,
@@ -124,7 +121,7 @@ impl State {
         };
 
         // Render pipeline for colored meshes without any textures.
-        let colored_render_pipeline = rendering::util::create_colored_mesh_render_pipeline(
+        let colored_render_pipeline = graphics::util::create_colored_mesh_render_pipeline(
             &gpu,
             &camera_bundle,
             &light_bind_group_layout,
@@ -234,7 +231,7 @@ impl State {
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        utilities::resize(
+        graphics::util::resize(
             new_size,
             &mut self.gpu,
             &mut self.depth_texture,
@@ -351,7 +348,6 @@ impl State {
             });
 
             render_pass.set_vertex_buffer(1, self.static_instance_buffer.slice(..));
-            use crate::model::DrawLight;
             render_pass.set_pipeline(&self.light_render_pipeline);
             render_pass.draw_light_model_instanced(
                 &self.obj_model,

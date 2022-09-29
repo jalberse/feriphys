@@ -1,8 +1,8 @@
-use crate::gpu_interface::GPUInterface;
-use crate::instance::Instance;
-use crate::instance::InstanceRaw;
-use crate::model::ColoredMesh;
-use crate::model::DrawColoredMesh;
+use super::gpu_interface::GPUInterface;
+use super::instance::Instance;
+use super::instance::InstanceRaw;
+use super::model::ColoredMesh;
+use super::model::DrawColoredMesh;
 use crate::simulation::particles::MAX_INSTANCES;
 
 use cgmath::{EuclideanSpace, InnerSpace, Vector3};
