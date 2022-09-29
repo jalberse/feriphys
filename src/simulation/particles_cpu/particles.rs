@@ -41,6 +41,7 @@ pub struct Config {
     pub particles_drag_range: f32,
     pub acceleration_gravity: Vector3<f32>,
     pub wind: cgmath::Vector3<f32>,
+    pub coefficient_of_restitution: f32,
     pub y_axis_attractor_gravity: f32,
     pub generator_radius: f32,
     pub generator_position: Vector3<f32>,
@@ -70,6 +71,7 @@ impl Default for Config {
                 y: 0.0,
                 z: 0.0,
             },
+            coefficient_of_restitution: 0.95,
             y_axis_attractor_gravity: 0.0,
             generator_radius: 1.0,
             generator_position: Vector3::<f32>::unit_y() * 2.0,
@@ -218,8 +220,7 @@ impl Simulation {
                         velocity_collision.dot(tri.normal()) * tri.normal();
                     let velocity_collision_tangent = velocity_collision - velocity_collision_normal;
 
-                    // TODO make the coefficient of restitution (0.9 here) configurable.
-                    let velocity_response_normal = -1.0 * velocity_collision_normal * 0.95;
+                    let velocity_response_normal = -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
                     let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
                         velocity_collision_tangent
                     } else {
@@ -302,6 +303,7 @@ impl Simulation {
         self.config.particles_generated_per_step = ui_config_state.particles_generated_per_step;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;
         self.config.wind = ui_config_state.wind;
+        self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
         self.config.y_axis_attractor_gravity = ui_config_state.y_axis_attractor_gravity;
         self.config.particles_lifetime_mean = ui_config_state.particles_lifetime_mean;
         self.config.particles_lifetime_range = ui_config_state.particles_lifetime_range;

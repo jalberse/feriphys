@@ -78,6 +78,12 @@ impl Ui for ParticlesUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.coefficient_of_restitution,
+                    ParticlesUi::MIN_COEFFICIENT_OF_RESTITUTION..=ParticlesUi::MAX_COEFFICIENT_OF_RESTITUTION,
+                ).text("Coefficient of Restitution"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.particles_lifetime_mean,
                     ParticlesUi::MIN_LIFETIME.as_secs_f32()
                         ..=ParticlesUi::MAX_LIFETIME.as_secs_f32(),
@@ -175,6 +181,9 @@ impl ParticlesUi {
 
     const ACCELERATION_GRAVITY_MIN: f32 = -20.0;
     const ACCELERATION_GRAVITY_MAX: f32 = 20.0;
+
+    const MIN_COEFFICIENT_OF_RESTITUTION: f32 = 0.0;
+    const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 2.0;
 
     const MIN_Y_AXIS_ATTRACTOR_GRAVITY: f32 = -10.0;
     const MAX_Y_AXIS_ATTRCTOR_GRAVITY: f32 = 10.0;
