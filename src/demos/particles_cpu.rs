@@ -68,10 +68,6 @@ impl State {
         let particles_entity = simulation_state.get_particles_entity(&gpu);
         let scene = Scene::new(particles_entity, obstacle_entity);
 
-        // TODO then, once we have a Scene that's just static and working to render stuff to the screen,
-        //   we can here first initialize our simulation, and then build the scene from the simulation's state.
-        //   Each update(), we'll update our scene from the simulation state.
-
         Self {
             gpu,
             render_pipeline,
