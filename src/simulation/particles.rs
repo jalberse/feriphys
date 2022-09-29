@@ -17,7 +17,7 @@ const EPSILON: f32 = 0.001;
 /// and handling that in the shader instead of using our colored mesh's color. The colored mesh color
 /// will only be used to inform the default instance color.
 ///
-/// a vortex would be pretty easy to add. We can probably enable/disable as a bool.
+/// a vortex would be pretty easy to add. Its strength could be from 0 to some large value.
 /// We just apply a circular force around the y axis, proportional to the distance
 /// from the center (stronger when closer up to some cap).
 
@@ -169,8 +169,21 @@ impl Simulation {
             let acceleration_wind =
                 particle.drag * self.config.wind * self.config.wind.magnitude() / particle.mass;
 
-            let acceleration =
-                self.config.acceleration_gravity + acceleration_air_resistance + acceleration_wind;
+            // TODO: Calculate acceleration due to some vortex force.
+            let center_line_unit_vec = Vector3::<f32>::unit_y();
+            let displacement_on_center_line = (particle.position - Vector3::<f32>::zero())
+                .dot(center_line_unit_vec)
+                * center_line_unit_vec;
+            let displacement_from_center_line =
+                (particle.position - Vector3::<f32>::zero()) - displacement_on_center_line;
+            let acceleration_gravity_center_line = -2.0 * 1.0
+                / displacement_from_center_line.magnitude().powi(2)
+                * displacement_from_center_line;
+
+            let acceleration = self.config.acceleration_gravity
+                + acceleration_air_resistance
+                + acceleration_wind
+                + acceleration_gravity_center_line;
 
             let original_position = particle.position;
             let original_velocity = particle.velocity;
