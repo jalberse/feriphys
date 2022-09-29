@@ -364,9 +364,6 @@ impl State {
                 &self.light_bind_group,
             );
 
-            // TODO we should build a more robust system for correlating models with the instance buffer,
-            //      and their index(s) in the instance buffers. For now, since we have only 3 objects,
-            //      I'll juggle them in code.
             render_pass.set_vertex_buffer(1, self.dynamic_instance_buffer.slice(..));
             render_pass.draw_colored_mesh_instanced(
                 &self.sphere_mesh,
