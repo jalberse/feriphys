@@ -4,6 +4,7 @@ use clap::{Parser, ValueEnum};
 pub enum Demos {
     BouncingBall,
     ParticlesCpu,
+    Flocking,
 }
 
 #[derive(Parser)]

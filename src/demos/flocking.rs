@@ -1,18 +1,6 @@
-use crate::graphics::camera::CameraBundle;
-use crate::graphics::entity::Entity;
-use crate::graphics::forms;
-use crate::graphics::gpu_interface::GPUInterface;
-use crate::graphics::instance::Instance;
-use crate::graphics;
-use crate::graphics::light;
-use crate::graphics::texture;
-use crate::graphics::scene::Scene;
-use crate::simulation;
-use crate::gui;
+use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, instance::Instance, scene::Scene, entity::Entity}, gui};
 
-use cgmath::Rotation3;
-use cgmath::Vector3;
-use cgmath::Zero;
+use cgmath::{Vector3, Zero, Rotation3};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -26,7 +14,6 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    simulation_state: simulation::particles_cpu::particles::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -35,7 +22,6 @@ struct State {
 impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
-
         let camera_bundle = CameraBundle::new(&gpu);
         let depth_texture =
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth texture");
@@ -50,10 +36,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let obstacle = forms::get_cube_kilter(&gpu.device, [0.9, 0.1, 0.1]);
-
-        let simulation_state = simulation::particles_cpu::particles::Simulation::new(&obstacle);
-
+        let cube  = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
         let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
             position: Vector3::<f32>::zero(),
@@ -63,10 +46,9 @@ impl State {
             ),
             scale: 1.0,
         });
-        let obstacle_entity = Entity::new(&gpu, obstacle, instances);
+        let cube_entity = Entity::new(&gpu, cube, instances);
 
-        let particles_entity = simulation_state.get_particles_entity(&gpu);
-        let scene = Scene::new(Some(vec![obstacle_entity]), Some(vec![particles_entity]));
+        let scene = Scene::new(Some(vec![cube_entity]), None);
 
         Self {
             gpu,
@@ -74,7 +56,6 @@ impl State {
             depth_texture,
             camera_bundle,
             light_bind_group,
-            simulation_state,
             scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
@@ -124,15 +105,9 @@ impl State {
         self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // Simulate until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
-        while self.time_accumulator >= self.simulation_state.get_timestep() {
-            let elapsed_sim_time = self.simulation_state.step();
-            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
-        }
+        // TODO simulate
 
-        let particle_instances = self.simulation_state.get_particles_instances();
-        self.scene
-            .update_particle_locations(&self.gpu, 0, particle_instances);
+        // TODO update scene from simulation
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -148,46 +123,46 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    // texture to save the colors into
-                    view: &view,
-                    // The texture that will receive the resolved output; defaults to view.
-                    resolve_target: None,
-                    // Tells wgpu what to do with the colors on the screen (i.e. in view).
-                    ops: wgpu::Operations {
-                        // load tells wgpu how to handle colors from the previous screen.
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
+            {
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Render Pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        // texture to save the colors into
+                        view: &view,
+                        // The texture that will receive the resolved output; defaults to view.
+                        resolve_target: None,
+                        // Tells wgpu what to do with the colors on the screen (i.e. in view).
+                        ops: wgpu::Operations {
+                            // load tells wgpu how to handle colors from the previous screen.
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }),
+                            // If we want to store the rendered results to the Texture behind out TextureView.
+                            store: true,
+                        },
+                    })],
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &self.depth_texture.view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: true,
                         }),
-                        // If we want to store the rendered results to the Texture behind out TextureView.
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        stencil_ops: None,
                     }),
-                    stencil_ops: None,
-                }),
-            });
-
-            render_pass.set_pipeline(&self.render_pipeline);
-            self.scene.draw(
-                &self.gpu,
-                &mut render_pass,
-                self.camera_bundle.camera.position,
-                &self.camera_bundle.camera_bind_group,
-                &self.light_bind_group,
-            );
-        }
+                });
+    
+                render_pass.set_pipeline(&self.render_pipeline);
+                self.scene.draw(
+                    &self.gpu,
+                    &mut render_pass,
+                    self.camera_bundle.camera.position,
+                    &self.camera_bundle.camera_bind_group,
+                    &self.light_bind_group,
+                );
+            }
 
         encoder.finish()
     }
@@ -198,13 +173,10 @@ pub fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    // Our game loop follows the famous "fix your timestep!" model:
-    // https://gafferongames.com/post/fix_your_timestep/
-    // The state holds the accumulator.
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut particles_ui = gui::particles_gui::ParticlesUi::new();
+    // TODO get the flocking ui here.
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -217,20 +189,12 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                state.simulation_state.sync_sim_config_from_ui(&mut particles_ui);
+                // TODO sync the sim config from the ui.
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                let gui_render_command_buffer = gui.render(
-                    &mut particles_ui,
-                    frame_time,
-                    &state.gpu.device,
-                    &state.gpu.config,
-                    &state.gpu.queue,
-                    &window,
-                    &output
-                );
+                // TODO call the gui render and add it to the submission below.
 
-                state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
+                state.gpu.queue.submit([simulation_render_command_buffer]);
                 output.present();
             }
             Event::DeviceEvent {

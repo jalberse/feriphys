@@ -4,21 +4,22 @@ use crate::graphics::instance::Instance;
 use wgpu::BindGroup;
 
 pub struct Scene {
-    particles: Entity,
-    obstacle: Entity,
+    // TODO we don't enforce at compile time whether we passed in the correct entities for particles vs
+    //   for the entities field, so we may get bad behavior if order flips. WE should make a type to differentiate.
+    entities: Option<Vec<Entity>>,
+    particles: Option<Vec<Entity>>,
 }
 
 impl Scene {
-    pub fn new(particles: Entity, obstacle: Entity) -> Scene {
-        // TODO we could have particles be a Vec<Entity>, so that we could have multiple particle systems getting rendered.
+    pub fn new(entities: Option<Vec<Entity>>, particles: Option<Vec<Entity>>) -> Scene {
         Scene {
+            entities,
             particles,
-            obstacle,
         }
     }
 
     /// TODO for now, we're just assuming the render_pass has a render pipeline set up that is compatible with
-    /// what we're drawing here. We should develop a system for ensuring it's correct.
+    /// what we're drawing here (i.e. colored meshes). We should develop a system for ensuring it's correct.
     /// If I try to draw a not-ColoredMesh thing, we'll need to do that. Maybe we'd have multiple render passes,
     /// each associated with a render pipeline. We can bundle those two, and then iterate over them. We can match
     /// on the type of render pipeline (or maybe the type of entity?) and use the correct one. Something like that.
@@ -32,14 +33,25 @@ impl Scene {
     ) where
         'a: 'b,
     {
-        self.particles.orient_instances(&gpu, camera_position);
-        self.particles
-            .draw(render_pass, camera_bind_group, light_bind_group);
-        self.obstacle
-            .draw(render_pass, camera_bind_group, light_bind_group);
+        if let Some(entities) = &self.entities {
+            entities.iter().for_each(|entity|
+                entity.draw(render_pass, camera_bind_group, light_bind_group));
+        }
+
+        if let Some(particles) = &mut self.particles {
+            for particle_group in particles.iter_mut(){
+                particle_group.orient_instances(&gpu, camera_position);
+                particle_group.draw(render_pass, camera_bind_group, light_bind_group)
+            }
+        }
     }
 
-    pub fn update_particle_locations(&mut self, gpu: &GPUInterface, instances: Vec<Instance>) {
-        self.particles.update_instances(gpu, instances);
+    /// Updates the instances of the particle entity at the specific index.
+    /// Panics if the index is out of range of the scene's particles
+    /// TODO - Can we improve this API so we never panic?
+    pub fn update_particle_locations(&mut self, gpu: &GPUInterface, particles_entity_index: usize, instances: Vec<Instance>) {
+        if let Some(particles) = &mut self.particles {
+            particles[particles_entity_index].update_instances(gpu, instances);
+        }
     }
 }
