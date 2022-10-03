@@ -389,7 +389,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut bouncing_ball_ui = gui::bounce_gui::BouncingBallUi::new();
+    let mut bouncing_ball_ui = gui::bounce::BouncingBallUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {

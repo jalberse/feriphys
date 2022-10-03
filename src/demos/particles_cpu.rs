@@ -204,7 +204,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut particles_ui = gui::particles_gui::ParticlesUi::new();
+    let mut particles_ui = gui::particles::ParticlesUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {

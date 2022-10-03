@@ -298,7 +298,7 @@ impl Simulation {
         std::time::Duration::from_secs_f32(self.config.dt)
     }
 
-    pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles_gui::ParticlesUi) {
+    pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles::ParticlesUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.dt = ui_config_state.dt;
         self.config.particles_generated_per_step = ui_config_state.particles_generated_per_step;
