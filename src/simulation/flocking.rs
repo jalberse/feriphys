@@ -70,7 +70,11 @@ impl Simulation {
                 y: rand::random(),
                 z: rand::random(),
             };
-            let velocity = Vector3::<f32>::zero();
+            let velocity = Vector3::<f32> {
+                x: rand::random(),
+                y: rand::random(),
+                z: rand::random(),
+            };
             boids.push(Boid { position, velocity });
         }
 
