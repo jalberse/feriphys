@@ -11,6 +11,17 @@ impl Boid {
         (other.position - self.position).magnitude()
     }
 
+    /// Returns the "sight angle" from this boid to the other,
+    /// i.e. the angle away from the forward (velocity) vector of this
+    /// boid to the other. Radians.
+    pub fn sight_angle(&self, other: &Boid) -> f32 {
+        f32::acos(
+            self.velocity
+                .normalize()
+                .dot((other.position - self.position).normalize()),
+        )
+    }
+
     /// Gets the acceleration of this boid due to the other boid due to the avoidance force.
     pub fn get_avoidance_acceleration(&self, other: &Boid, factor: f32) -> Vector3<f32> {
         if cgmath::abs_diff_eq!(other.position, self.position) {

@@ -14,6 +14,10 @@ pub struct Config {
     pub distance_weight_threshold: f32,
     /// The distance past the distance_threshold over which the weight interpolates to 0.0.
     pub distance_weight_threshold_falloff: f32,
+    /// The maximal angle in radians (0 to pi) for which boids can "see" other boids,
+    /// where pi means boids can see all other boids, including those directly behind
+    /// them. The forward direction is in the direction of the boid's velocity.
+    pub max_sight_angle: f32,
 }
 
 impl Default for Config {
@@ -25,6 +29,7 @@ impl Default for Config {
             velocity_matching_factor: 1.0,
             distance_weight_threshold: 1.0,
             distance_weight_threshold_falloff: 1.0,
+            max_sight_angle: std::f32::consts::PI,
         }
     }
 }
@@ -67,6 +72,7 @@ impl Simulation {
                     || boid.distance(other_boid)
                         > self.config.distance_weight_threshold
                             + self.config.distance_weight_threshold_falloff
+                    || boid.sight_angle(other_boid) > self.config.max_sight_angle
                 {
                     continue;
                 }
@@ -111,6 +117,7 @@ impl Simulation {
         self.config.distance_weight_threshold = ui_config_state.distance_weight_threshold;
         self.config.distance_weight_threshold_falloff =
             ui_config_state.distance_weight_threshold_falloff;
+        self.config.max_sight_angle = ui_config_state.max_sight_angle;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {

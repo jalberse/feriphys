@@ -55,6 +55,13 @@ impl Ui for FlockingUi {
                 )
                 .text("Distance Weight Threshold Falloff"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.max_sight_angle,
+                    FlockingUi::MAX_SIGHT_ANGLE_MIN..=FlockingUi::MAX_SIGHT_ANGLE_MAX,
+                )
+                .text("Max Sight Angle"),
+            );
         });
     }
 }
@@ -77,6 +84,9 @@ impl FlockingUi {
 
     const DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MIN: f32 = 0.0;
     const DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MAX: f32 = 10.0;
+
+    const MAX_SIGHT_ANGLE_MIN: f32 = 0.0;
+    const MAX_SIGHT_ANGLE_MAX: f32 = std::f32::consts::PI;
 
     pub fn new() -> FlockingUi {
         FlockingUi {
