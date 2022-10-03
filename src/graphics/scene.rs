@@ -6,6 +6,8 @@ use wgpu::BindGroup;
 pub struct Scene {
     // TODO we don't enforce at compile time whether we passed in the correct entities for particles vs
     //   for the entities field, so we may get bad behavior if order flips. WE should make a type to differentiate.
+    //   Or reeally, Entity might be best as a typed Enum - ParticleEntity, ColoredMeshEntity (or something)
+    //   so that the Scene just stores a list of entities. The behavior for drawing them etc is handled within each Entity variant.
     entities: Option<Vec<Entity>>,
     particles: Option<Vec<Entity>>,
 }
@@ -49,9 +51,19 @@ impl Scene {
     /// Updates the instances of the particle entity at the specific index.
     /// Panics if the index is out of range of the scene's particles
     /// TODO - Can we improve this API so we never panic?
-    pub fn update_particle_locations(&mut self, gpu: &GPUInterface, particles_entity_index: usize, instances: Vec<Instance>) {
+    pub fn update_particle_instances(&mut self, gpu: &GPUInterface, particles_entity_index: usize, instances: Vec<Instance>) {
         if let Some(particles) = &mut self.particles {
             particles[particles_entity_index].update_instances(gpu, instances);
+        }
+    }
+
+    /// Updates the instances of the entity at the specific index.
+    /// Panics if the index is out of range of the scene's entities.
+    /// TODO - Can we improve this API so we never panic? And related to comment about entities, can we
+    /// combine with the particles one?
+    pub fn update_entity_instances(&mut self, gpu: &GPUInterface, entity_index: usize, instances: Vec<Instance>) {
+        if let Some(entities) = &mut self.entities {
+            entities[entity_index].update_instances(gpu, instances);
         }
     }
 }

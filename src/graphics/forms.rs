@@ -157,7 +157,6 @@ pub fn get_cube_interior_normals(device: &wgpu::Device, color: [f32; 3]) -> mode
 
 /// Generates a sphere mesh with the specified color, radius, and number of sectors and stacks.
 /// The vertices have their normals averaged across adjacent faces.
-#[allow(dead_code)]
 pub fn generate_sphere(
     device: &wgpu::Device,
     color: [f32; 3],

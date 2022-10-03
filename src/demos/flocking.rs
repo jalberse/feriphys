@@ -1,6 +1,5 @@
-use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, instance::Instance, scene::Scene, entity::Entity}, gui, simulation};
+use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, scene::Scene, entity::Entity}, gui, simulation};
 
-use cgmath::{Vector3, Zero, Rotation3};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -39,19 +38,11 @@ impl State {
 
         let simulation = simulation::flocking::Simulation::new();
 
-        let cube  = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
-        let mut instances = Vec::<Instance>::new();
-        instances.push(Instance {
-            position: Vector3::<f32>::zero(),
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        });
-        let cube_entity = Entity::new(&gpu, cube, instances);
+        let sphere  = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+        let instances = simulation.get_boid_instances();
+        let boids_entity = Entity::new(&gpu, sphere, instances);
 
-        let scene = Scene::new(Some(vec![cube_entity]), None);
+        let scene = Scene::new(Some(vec![boids_entity]), None);
 
         Self {
             gpu,
@@ -109,13 +100,13 @@ impl State {
         self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // TODO uncomment once we actually do work in the update, or we'll hang
-        // while self.time_accumulator >= self.simulation.get_timestep() {
-        //     let elapsed_sim_time = self.simulation.step();
-        //     self.time_accumulator = self.time_accumulator - elapsed_sim_time;
-        // }
+        while self.time_accumulator >= self.simulation.get_timestep() {
+            let elapsed_sim_time = self.simulation.step();
+            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        }
 
-        // TODO update scene from simulation
+        let new_instances = self.simulation.get_boid_instances();
+        self.scene.update_entity_instances(&self.gpu, 0, new_instances);
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {

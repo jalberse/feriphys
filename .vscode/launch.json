@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["particles"],
+            "args": ["flocking"],
             "cwd": "${workspaceFolder}"
         },
         {

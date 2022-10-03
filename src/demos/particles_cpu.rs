@@ -132,7 +132,7 @@ impl State {
 
         let particle_instances = self.simulation_state.get_particles_instances();
         self.scene
-            .update_particle_locations(&self.gpu, 0, particle_instances);
+            .update_particle_instances(&self.gpu, 0, particle_instances);
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
