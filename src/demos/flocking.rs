@@ -3,7 +3,8 @@ use crate::{
         self, camera::CameraBundle, entity::Entity, forms, gpu_interface::GPUInterface, light,
         scene::Scene, texture,
     },
-    gui, simulation,
+    gui,
+    simulation::flocking::flocking,
 };
 
 use winit::{
@@ -19,7 +20,7 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    simulation: simulation::flocking::Simulation,
+    simulation: flocking::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -42,7 +43,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let simulation = simulation::flocking::Simulation::new();
+        let simulation = flocking::Simulation::new();
 
         let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
         let instances = simulation.get_boid_instances();

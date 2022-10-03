@@ -1,5 +1,5 @@
 use crate::gui::Ui;
-use crate::simulation::flocking;
+use crate::simulation::flocking::flocking;
 use egui::Slider;
 
 pub struct FlockingUi {
