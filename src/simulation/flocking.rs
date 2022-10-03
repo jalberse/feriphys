@@ -1,6 +1,6 @@
-use crate::{gui, graphics::instance::Instance};
+use crate::{graphics::instance::Instance, gui};
 
-use cgmath::{Vector3, InnerSpace, Zero, Rotation3};
+use cgmath::{InnerSpace, Rotation3, Vector3, Zero};
 
 use std::time::Duration;
 
@@ -14,32 +14,41 @@ impl Boid {
     /// Gets the acceleration of this boid due to the other boid due to the avoidance force.
     pub fn get_avoidance_acceleration(&self, other: &Boid, factor: f32) -> Vector3<f32> {
         if cgmath::abs_diff_eq!(other.position, self.position) {
-            return Vector3::<f32>::zero()
+            return Vector3::<f32>::zero();
         }
-        -1.0 * factor / (other.position - self.position).magnitude().powf(2.0) * (other.position - self.position).normalize() 
+        -1.0 * factor / (other.position - self.position).magnitude().powf(2.0)
+            * (other.position - self.position).normalize()
     }
 
     /// Gets the acceleration of this boid due to the other boid due to the centering force.
     pub fn get_centering_acceleration(&self, other: &Boid, factor: f32) -> Vector3<f32> {
         if cgmath::abs_diff_eq!(other.position, self.position) {
-            return Vector3::<f32>::zero()
+            return Vector3::<f32>::zero();
         }
-        factor * (other.position - self.position).magnitude() * (other.position - self.position).normalize()
+        factor
+            * (other.position - self.position).magnitude()
+            * (other.position - self.position).normalize()
     }
 
     /// Gets the acceleration of this boid due to the other boid due to the velocity matching force.
     pub fn get_velocity_matching(&self, other: &Boid, factor: f32) -> Vector3<f32> {
         if cgmath::abs_diff_eq!(other.velocity, self.velocity) {
-            return Vector3::<f32>::zero()
+            return Vector3::<f32>::zero();
         }
         factor * (other.velocity - self.velocity)
     }
 
     /// Gets the acceleration of this boid due to the other boid.
-    pub fn get_acceleration(&self, other: &Boid, avoidance_factor: f32, centering_factor: f32, velocity_matching_factor: f32) -> Vector3<f32> {
+    pub fn get_acceleration(
+        &self,
+        other: &Boid,
+        avoidance_factor: f32,
+        centering_factor: f32,
+        velocity_matching_factor: f32,
+    ) -> Vector3<f32> {
         return self.get_avoidance_acceleration(other, avoidance_factor)
             + self.get_centering_acceleration(other, centering_factor)
-            + self.get_velocity_matching(other, velocity_matching_factor)
+            + self.get_velocity_matching(other, velocity_matching_factor);
     }
 }
 
@@ -85,16 +94,13 @@ impl Simulation {
             boids.push(Boid { position, velocity });
         }
 
-        Simulation {
-            config,
-            boids,
-        }
+        Simulation { config, boids }
     }
 
     pub fn step(&mut self) -> Duration {
         // TODO we could use a double buffer here instead of allocating a new vector here every step.
         let mut new_state = Vec::with_capacity(self.boids.len());
-        
+
         for boid in self.boids.iter() {
             let mut boid_acceleration = Vector3::<f32>::zero();
             for other_boid in self.boids.iter() {
@@ -102,16 +108,24 @@ impl Simulation {
                     continue;
                 }
 
-                boid_acceleration = boid_acceleration + boid.get_acceleration(
-                    other_boid, self.config.avoidance_factor, self.config.centering_factor, self.config.velocity_matching_factor);
+                boid_acceleration = boid_acceleration
+                    + boid.get_acceleration(
+                        other_boid,
+                        self.config.avoidance_factor,
+                        self.config.centering_factor,
+                        self.config.velocity_matching_factor,
+                    );
             }
 
             // TODO add handling for external forces on this boid
 
             let new_boid_position = boid.position + self.config.dt * boid.velocity;
             let new_boid_velocity = boid.velocity + self.config.dt * boid_acceleration;
-            
-            new_state.push(Boid { position: new_boid_position, velocity: new_boid_velocity});
+
+            new_state.push(Boid {
+                position: new_boid_position,
+                velocity: new_boid_velocity,
+            });
         }
 
         self.boids = new_state;

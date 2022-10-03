@@ -36,12 +36,13 @@ impl Scene {
         'a: 'b,
     {
         if let Some(entities) = &self.entities {
-            entities.iter().for_each(|entity|
-                entity.draw(render_pass, camera_bind_group, light_bind_group));
+            entities
+                .iter()
+                .for_each(|entity| entity.draw(render_pass, camera_bind_group, light_bind_group));
         }
 
         if let Some(particles) = &mut self.particles {
-            for particle_group in particles.iter_mut(){
+            for particle_group in particles.iter_mut() {
                 particle_group.orient_instances(&gpu, camera_position);
                 particle_group.draw(render_pass, camera_bind_group, light_bind_group)
             }
@@ -51,7 +52,12 @@ impl Scene {
     /// Updates the instances of the particle entity at the specific index.
     /// Panics if the index is out of range of the scene's particles
     /// TODO - Can we improve this API so we never panic?
-    pub fn update_particle_instances(&mut self, gpu: &GPUInterface, particles_entity_index: usize, instances: Vec<Instance>) {
+    pub fn update_particle_instances(
+        &mut self,
+        gpu: &GPUInterface,
+        particles_entity_index: usize,
+        instances: Vec<Instance>,
+    ) {
         if let Some(particles) = &mut self.particles {
             particles[particles_entity_index].update_instances(gpu, instances);
         }
@@ -61,7 +67,12 @@ impl Scene {
     /// Panics if the index is out of range of the scene's entities.
     /// TODO - Can we improve this API so we never panic? And related to comment about entities, can we
     /// combine with the particles one?
-    pub fn update_entity_instances(&mut self, gpu: &GPUInterface, entity_index: usize, instances: Vec<Instance>) {
+    pub fn update_entity_instances(
+        &mut self,
+        gpu: &GPUInterface,
+        entity_index: usize,
+        instances: Vec<Instance>,
+    ) {
         if let Some(entities) = &mut self.entities {
             entities[entity_index].update_instances(gpu, instances);
         }

@@ -1,5 +1,4 @@
 /// The forms module provides basic forms (planes, spheres, cubes...) for rendering.
-
 use super::model;
 
 use cgmath::{prelude::*, Vector3};

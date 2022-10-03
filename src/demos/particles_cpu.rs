@@ -1,14 +1,14 @@
+use crate::graphics;
 use crate::graphics::camera::CameraBundle;
 use crate::graphics::entity::Entity;
 use crate::graphics::forms;
 use crate::graphics::gpu_interface::GPUInterface;
 use crate::graphics::instance::Instance;
-use crate::graphics;
 use crate::graphics::light;
-use crate::graphics::texture;
 use crate::graphics::scene::Scene;
-use crate::simulation;
+use crate::graphics::texture;
 use crate::gui;
+use crate::simulation;
 
 use cgmath::Rotation3;
 use cgmath::Vector3;

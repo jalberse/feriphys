@@ -1,11 +1,11 @@
+use crate::graphics;
+use crate::graphics::camera::CameraBundle;
 use crate::graphics::forms;
 use crate::graphics::gpu_interface::GPUInterface;
-use crate::gui;
 use crate::graphics::instance::{Instance, InstanceRaw};
-use crate::graphics;
-use crate::graphics::{light, texture, resources};
-use crate::graphics::camera::CameraBundle;
-use crate::graphics::model::{ColoredMesh, DrawColoredMesh, Model, ModelVertex, Vertex, DrawLight};
+use crate::graphics::model::{ColoredMesh, DrawColoredMesh, DrawLight, Model, ModelVertex, Vertex};
+use crate::graphics::{light, resources, texture};
+use crate::gui;
 use crate::simulation;
 
 use cgmath::prelude::*;

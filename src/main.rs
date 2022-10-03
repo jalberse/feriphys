@@ -1,8 +1,8 @@
 mod args;
-mod gui;
-mod graphics;
-mod simulation;
 mod demos;
+mod graphics;
+mod gui;
+mod simulation;
 
 use args::{Demos, FeriphysArgs};
 use clap::Parser;

@@ -1,4 +1,10 @@
-use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, scene::Scene, entity::Entity}, gui, simulation};
+use crate::{
+    graphics::{
+        self, camera::CameraBundle, entity::Entity, forms, gpu_interface::GPUInterface, light,
+        scene::Scene, texture,
+    },
+    gui, simulation,
+};
 
 use winit::{
     event::*,
@@ -38,7 +44,7 @@ impl State {
 
         let simulation = simulation::flocking::Simulation::new();
 
-        let sphere  = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+        let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
         let instances = simulation.get_boid_instances();
         let boids_entity = Entity::new(&gpu, sphere, instances);
 
@@ -106,7 +112,8 @@ impl State {
         }
 
         let new_instances = self.simulation.get_boid_instances();
-        self.scene.update_entity_instances(&self.gpu, 0, new_instances);
+        self.scene
+            .update_entity_instances(&self.gpu, 0, new_instances);
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -122,46 +129,46 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-            {
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Render Pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        // texture to save the colors into
-                        view: &view,
-                        // The texture that will receive the resolved output; defaults to view.
-                        resolve_target: None,
-                        // Tells wgpu what to do with the colors on the screen (i.e. in view).
-                        ops: wgpu::Operations {
-                            // load tells wgpu how to handle colors from the previous screen.
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }),
-                            // If we want to store the rendered results to the Texture behind out TextureView.
-                            store: true,
-                        },
-                    })],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &self.depth_texture.view,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: true,
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    // texture to save the colors into
+                    view: &view,
+                    // The texture that will receive the resolved output; defaults to view.
+                    resolve_target: None,
+                    // Tells wgpu what to do with the colors on the screen (i.e. in view).
+                    ops: wgpu::Operations {
+                        // load tells wgpu how to handle colors from the previous screen.
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
                         }),
-                        stencil_ops: None,
+                        // If we want to store the rendered results to the Texture behind out TextureView.
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
                     }),
-                });
-    
-                render_pass.set_pipeline(&self.render_pipeline);
-                self.scene.draw(
-                    &self.gpu,
-                    &mut render_pass,
-                    self.camera_bundle.camera.position,
-                    &self.camera_bundle.camera_bind_group,
-                    &self.light_bind_group,
-                );
-            }
+                    stencil_ops: None,
+                }),
+            });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            self.scene.draw(
+                &self.gpu,
+                &mut render_pass,
+                self.camera_bundle.camera.position,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
+        }
 
         encoder.finish()
     }

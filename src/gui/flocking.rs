@@ -20,16 +20,14 @@ impl Ui for FlockingUi {
             ui.add(
                 Slider::new(
                     &mut self.sim_config.avoidance_factor,
-                    FlockingUi::AVOIDANCE_FACTOR_MIN
-                        ..=FlockingUi::AVOIDANCE_FACTOR_MAX,
+                    FlockingUi::AVOIDANCE_FACTOR_MIN..=FlockingUi::AVOIDANCE_FACTOR_MAX,
                 )
                 .text("Avoidance Factor"),
             );
             ui.add(
                 Slider::new(
                     &mut self.sim_config.centering_factor,
-                    FlockingUi::CENTERING_FACTOR_MIN
-                        ..=FlockingUi::CENTERING_FACTOR_MAX,
+                    FlockingUi::CENTERING_FACTOR_MIN..=FlockingUi::CENTERING_FACTOR_MAX,
                 )
                 .text("Centering Factor"),
             );

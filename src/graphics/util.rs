@@ -1,14 +1,11 @@
 use wgpu::{BindGroupLayout, RenderPipeline};
 
 use crate::{
-    graphics::model::{
-        ColoredVertex,
-        Vertex
-    },
-    graphics::instance,
-    graphics::texture,
     graphics::camera::CameraBundle,
-    graphics::gpu_interface::GPUInterface
+    graphics::gpu_interface::GPUInterface,
+    graphics::instance,
+    graphics::model::{ColoredVertex, Vertex},
+    graphics::texture,
 };
 
 use super::camera::Projection;

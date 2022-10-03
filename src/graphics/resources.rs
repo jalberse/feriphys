@@ -2,8 +2,8 @@ use super::model;
 use super::texture;
 
 use std::io::{BufReader, Cursor};
-use wgpu::util::DeviceExt;
 use tobj;
+use wgpu::util::DeviceExt;
 
 pub fn load_string(file_name: &str) -> anyhow::Result<String> {
     let path = std::path::Path::new(env!("OUT_DIR"))

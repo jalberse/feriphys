@@ -1,10 +1,6 @@
 use crate::{
-    graphics::entity::Entity,
-    graphics::forms,
-    graphics::gpu_interface::GPUInterface,
-    graphics::instance::Instance,
-    graphics::model::ColoredMesh,
-    gui,
+    graphics::entity::Entity, graphics::forms, graphics::gpu_interface::GPUInterface,
+    graphics::instance::Instance, graphics::model::ColoredMesh, gui,
 };
 
 use super::generator;
@@ -222,14 +218,16 @@ impl Simulation {
                         velocity_collision.dot(tri.normal()) * tri.normal();
                     let velocity_collision_tangent = velocity_collision - velocity_collision_normal;
 
-                    let velocity_response_normal = -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
+                    let velocity_response_normal =
+                        -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
                     let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
                         velocity_collision_tangent
                     } else {
                         velocity_collision_tangent
                             - velocity_collision_tangent.normalize()
                                 * f32::min(
-                                    self.config.coefficient_of_friction * velocity_collision_normal.magnitude(),
+                                    self.config.coefficient_of_friction
+                                        * velocity_collision_normal.magnitude(),
                                     velocity_collision_tangent.magnitude(),
                                 )
                     };
