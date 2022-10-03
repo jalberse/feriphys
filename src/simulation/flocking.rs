@@ -38,12 +38,18 @@ impl Boid {
 
 pub struct Config {
     pub dt: f32, // secs as f32
+    pub avoidance_factor: f32,
+    pub centering_factor: f32,
+    pub velocity_matching_factor: f32,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             dt: Duration::from_millis(1).as_secs_f32(),
+            avoidance_factor: 1.0,
+            centering_factor: 1.0,
+            velocity_matching_factor: 1.0,
         }
     }
 }
@@ -85,11 +91,10 @@ impl Simulation {
                     continue;
                 }
 
-                // TODO make these factors configurable through the UI.
                 boid_acceleration = boid_acceleration
-                    + boid.get_avoidance_acceleration(other_boid, 0.1)
-                    + boid.get_centering_acceleration(other_boid, 0.1)
-                    + boid.get_velocity_matching(other_boid, 0.1);
+                    + boid.get_avoidance_acceleration(other_boid, self.config.avoidance_factor)
+                    + boid.get_centering_acceleration(other_boid, self.config.centering_factor)
+                    + boid.get_velocity_matching(other_boid, self.config.velocity_matching_factor);
             }
 
             // TODO add handling for external forces on this boid
@@ -112,6 +117,9 @@ impl Simulation {
     pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::flocking::FlockingUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.dt = ui_config_state.dt;
+        self.config.avoidance_factor = ui_config_state.avoidance_factor;
+        self.config.centering_factor = ui_config_state.centering_factor;
+        self.config.velocity_matching_factor = ui_config_state.velocity_matching_factor;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {

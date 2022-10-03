@@ -17,6 +17,30 @@ impl Ui for FlockingUi {
                 )
                 .text("Simualtion dt (secs)"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.avoidance_factor,
+                    FlockingUi::AVOIDANCE_FACTOR_MIN
+                        ..=FlockingUi::AVOIDANCE_FACTOR_MAX,
+                )
+                .text("Avoidance Factor"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.centering_factor,
+                    FlockingUi::CENTERING_FACTOR_MIN
+                        ..=FlockingUi::CENTERING_FACTOR_MAX,
+                )
+                .text("Centering Factor"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.velocity_matching_factor,
+                    FlockingUi::VELOCITY_MATCHING_FACTOR_MIN
+                        ..=FlockingUi::VELOCITY_MATHCING_FACTOR_MAX,
+                )
+                .text("Velocity Matching Factor"),
+            );
         });
     }
 }
@@ -24,6 +48,15 @@ impl Ui for FlockingUi {
 impl FlockingUi {
     const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
     const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
+
+    const AVOIDANCE_FACTOR_MIN: f32 = 0.0;
+    const AVOIDANCE_FACTOR_MAX: f32 = 10.0;
+
+    const CENTERING_FACTOR_MIN: f32 = 0.0;
+    const CENTERING_FACTOR_MAX: f32 = 10.0;
+
+    const VELOCITY_MATCHING_FACTOR_MIN: f32 = 0.0;
+    const VELOCITY_MATHCING_FACTOR_MAX: f32 = 10.0;
 
     pub fn new() -> FlockingUi {
         FlockingUi {
