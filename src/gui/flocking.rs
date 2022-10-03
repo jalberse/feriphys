@@ -39,6 +39,22 @@ impl Ui for FlockingUi {
                 )
                 .text("Velocity Matching Factor"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.distance_weight_threshold,
+                    FlockingUi::DISTANCE_WEIGHT_THRESHOLD_MIN
+                        ..=FlockingUi::DISTANCE_WEIGHT_THRESHOLD_MAX,
+                )
+                .text("Distance Weight Threshold"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.distance_weight_threshold_falloff,
+                    FlockingUi::DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MIN
+                        ..=FlockingUi::DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MAX,
+                )
+                .text("Distance Weight Threshold Falloff"),
+            );
         });
     }
 }
@@ -55,6 +71,12 @@ impl FlockingUi {
 
     const VELOCITY_MATCHING_FACTOR_MIN: f32 = 0.0;
     const VELOCITY_MATHCING_FACTOR_MAX: f32 = 10.0;
+
+    const DISTANCE_WEIGHT_THRESHOLD_MIN: f32 = 0.0;
+    const DISTANCE_WEIGHT_THRESHOLD_MAX: f32 = 10.0;
+
+    const DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MIN: f32 = 0.0;
+    const DISTANCE_WEIGHT_THRESHOLD_FALLOFF_MAX: f32 = 10.0;
 
     pub fn new() -> FlockingUi {
         FlockingUi {

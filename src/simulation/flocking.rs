@@ -11,12 +11,16 @@ struct Boid {
 }
 
 impl Boid {
+    pub fn distance(&self, other: &Boid) -> f32 {
+        (other.position - self.position).magnitude()
+    }
+
     /// Gets the acceleration of this boid due to the other boid due to the avoidance force.
     pub fn get_avoidance_acceleration(&self, other: &Boid, factor: f32) -> Vector3<f32> {
         if cgmath::abs_diff_eq!(other.position, self.position) {
             return Vector3::<f32>::zero();
         }
-        -1.0 * factor / (other.position - self.position).magnitude().powf(2.0)
+        -1.0 * factor / self.distance(other).powf(2.0)
             * (other.position - self.position).normalize()
     }
 
@@ -25,9 +29,7 @@ impl Boid {
         if cgmath::abs_diff_eq!(other.position, self.position) {
             return Vector3::<f32>::zero();
         }
-        factor
-            * (other.position - self.position).magnitude()
-            * (other.position - self.position).normalize()
+        factor * self.distance(other) * (other.position - self.position).normalize()
     }
 
     /// Gets the acceleration of this boid due to the other boid due to the velocity matching force.
@@ -45,10 +47,23 @@ impl Boid {
         avoidance_factor: f32,
         centering_factor: f32,
         velocity_matching_factor: f32,
+        distance_weight_threshold: f32,
+        distance_weight_threshold_falloff: f32,
     ) -> Vector3<f32> {
-        return self.get_avoidance_acceleration(other, avoidance_factor)
-            + self.get_centering_acceleration(other, centering_factor)
-            + self.get_velocity_matching(other, velocity_matching_factor);
+        let distance_weight = if self.distance(other) <= distance_weight_threshold {
+            1.0
+        } else if self.distance(other)
+            >= distance_weight_threshold + distance_weight_threshold_falloff
+        {
+            0.0
+        } else {
+            // Linear interpolation from 1.0 at distance_weight_threshold to 0.0 at distance_weight_threshold_falloff.
+            (self.distance(other) - distance_weight_threshold) / distance_weight_threshold_falloff
+        };
+        return distance_weight
+            * (self.get_avoidance_acceleration(other, avoidance_factor)
+                + self.get_centering_acceleration(other, centering_factor)
+                + self.get_velocity_matching(other, velocity_matching_factor));
     }
 }
 
@@ -57,6 +72,10 @@ pub struct Config {
     pub avoidance_factor: f32,
     pub centering_factor: f32,
     pub velocity_matching_factor: f32,
+    /// The maximum distance for which the weight for two boid's interaction is 1.0
+    pub distance_weight_threshold: f32,
+    /// The distance past the distance_threshold over which the weight interpolates to 0.0.
+    pub distance_weight_threshold_falloff: f32,
 }
 
 impl Default for Config {
@@ -66,6 +85,8 @@ impl Default for Config {
             avoidance_factor: 1.0,
             centering_factor: 1.0,
             velocity_matching_factor: 1.0,
+            distance_weight_threshold: 1.0,
+            distance_weight_threshold_falloff: 1.0,
         }
     }
 }
@@ -104,7 +125,11 @@ impl Simulation {
         for boid in self.boids.iter() {
             let mut boid_acceleration = Vector3::<f32>::zero();
             for other_boid in self.boids.iter() {
-                if other_boid == boid {
+                if other_boid == boid
+                    || boid.distance(other_boid)
+                        > self.config.distance_weight_threshold
+                            + self.config.distance_weight_threshold_falloff
+                {
                     continue;
                 }
 
@@ -114,6 +139,8 @@ impl Simulation {
                         self.config.avoidance_factor,
                         self.config.centering_factor,
                         self.config.velocity_matching_factor,
+                        self.config.distance_weight_threshold,
+                        self.config.distance_weight_threshold_falloff,
                     );
             }
 
@@ -143,6 +170,9 @@ impl Simulation {
         self.config.avoidance_factor = ui_config_state.avoidance_factor;
         self.config.centering_factor = ui_config_state.centering_factor;
         self.config.velocity_matching_factor = ui_config_state.velocity_matching_factor;
+        self.config.distance_weight_threshold = ui_config_state.distance_weight_threshold;
+        self.config.distance_weight_threshold_falloff =
+            ui_config_state.distance_weight_threshold_falloff;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {
