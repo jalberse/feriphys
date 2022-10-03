@@ -1,5 +1,6 @@
 pub mod bounce;
 pub mod particles;
+pub mod flocking;
 
 use egui::FontDefinitions;
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};

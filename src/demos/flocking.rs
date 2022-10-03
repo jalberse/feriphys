@@ -1,4 +1,4 @@
-use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, instance::Instance, scene::Scene, entity::Entity}, gui};
+use crate::{graphics::{gpu_interface::GPUInterface, texture, camera::CameraBundle, light, self, forms, instance::Instance, scene::Scene, entity::Entity}, gui, simulation};
 
 use cgmath::{Vector3, Zero, Rotation3};
 use winit::{
@@ -14,6 +14,7 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
+    simulation: simulation::flocking::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -36,6 +37,8 @@ impl State {
             &light_bind_group_layout,
         );
 
+        let simulation = simulation::flocking::Simulation::new();
+
         let cube  = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
         let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
@@ -56,6 +59,7 @@ impl State {
             depth_texture,
             camera_bundle,
             light_bind_group,
+            simulation,
             scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
@@ -105,7 +109,11 @@ impl State {
         self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // TODO simulate
+        // TODO uncomment once we actually do work in the update, or we'll hang
+        // while self.time_accumulator >= self.simulation.get_timestep() {
+        //     let elapsed_sim_time = self.simulation.step();
+        //     self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        // }
 
         // TODO update scene from simulation
     }
@@ -176,7 +184,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    // TODO get the flocking ui here.
+    let mut flocking_ui = gui::flocking::FlockingUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -189,12 +197,20 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                // TODO sync the sim config from the ui.
+                state.simulation.sync_sim_config_from_ui(&mut flocking_ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                // TODO call the gui render and add it to the submission below.
+                let gui_render_command_buffer = gui.render(
+                    &mut flocking_ui,
+                    frame_time,
+                    &state.gpu.device,
+                    &state.gpu.config,
+                    &state.gpu.queue,
+                    &window,
+                    &output
+                );
 
-                state.gpu.queue.submit([simulation_render_command_buffer]);
+                state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
                 output.present();
             }
             Event::DeviceEvent {
