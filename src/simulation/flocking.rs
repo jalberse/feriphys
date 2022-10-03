@@ -34,6 +34,13 @@ impl Boid {
         }
         factor * (other.velocity - self.velocity)
     }
+
+    /// Gets the acceleration of this boid due to the other boid.
+    pub fn get_acceleration(&self, other: &Boid, avoidance_factor: f32, centering_factor: f32, velocity_matching_factor: f32) -> Vector3<f32> {
+        return self.get_avoidance_acceleration(other, avoidance_factor)
+            + self.get_centering_acceleration(other, centering_factor)
+            + self.get_velocity_matching(other, velocity_matching_factor)
+    }
 }
 
 pub struct Config {
@@ -95,10 +102,8 @@ impl Simulation {
                     continue;
                 }
 
-                boid_acceleration = boid_acceleration
-                    + boid.get_avoidance_acceleration(other_boid, self.config.avoidance_factor)
-                    + boid.get_centering_acceleration(other_boid, self.config.centering_factor)
-                    + boid.get_velocity_matching(other_boid, self.config.velocity_matching_factor);
+                boid_acceleration = boid_acceleration + boid.get_acceleration(
+                    other_boid, self.config.avoidance_factor, self.config.centering_factor, self.config.velocity_matching_factor);
             }
 
             // TODO add handling for external forces on this boid
