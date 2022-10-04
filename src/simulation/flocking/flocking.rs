@@ -1,5 +1,5 @@
 use super::boid::Boid;
-use crate::{graphics::instance::Instance, gui};
+use crate::{graphics::instance::Instance, gui, simulation::bounding_box::BoundingBox};
 
 use cgmath::{Rotation3, Vector3, Zero};
 
@@ -37,10 +37,11 @@ impl Default for Config {
 pub struct Simulation {
     config: Config,
     boids: Vec<Boid>,
+    bounding_box: BoundingBox,
 }
 
 impl Simulation {
-    pub fn new() -> Simulation {
+    pub fn new(bounding_box: BoundingBox) -> Simulation {
         let config = Config::default();
 
         let mut boids = Vec::with_capacity(25);
@@ -58,7 +59,11 @@ impl Simulation {
             boids.push(Boid { position, velocity });
         }
 
-        Simulation { config, boids }
+        Simulation {
+            config,
+            boids,
+            bounding_box,
+        }
     }
 
     pub fn step(&mut self) -> Duration {
@@ -88,7 +93,10 @@ impl Simulation {
                     );
             }
 
-            // TODO add handling for external forces on this boid
+            let bounding_box_acceleration =
+                self.bounding_box.get_repelling_acceleration(boid.position);
+
+            let boid_acceleration = boid_acceleration + bounding_box_acceleration;
 
             let new_boid_position = boid.position + self.config.dt * boid.velocity;
             let new_boid_velocity = boid.velocity + self.config.dt * boid_acceleration;

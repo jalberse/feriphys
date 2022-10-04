@@ -4,7 +4,7 @@ use crate::{
         scene::Scene, texture,
     },
     gui,
-    simulation::flocking::flocking,
+    simulation::{self, flocking::flocking},
 };
 
 use winit::{
@@ -43,7 +43,13 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let simulation = flocking::Simulation::new();
+        let bounding_box = simulation::bounding_box::BoundingBox {
+            x_range: (-10.0..10.0),
+            y_range: (-10.0..10.0),
+            z_range: (-10.0..10.0),
+        };
+
+        let simulation = flocking::Simulation::new(bounding_box);
 
         let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
         let instances = simulation.get_boid_instances();
