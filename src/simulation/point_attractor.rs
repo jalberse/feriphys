@@ -23,6 +23,7 @@ impl PointAttractor {
     /// repellers for objects in a scene which particles/boids should avoid, e.g.
     /// The mass of the objects is scaled by each Instance's scale.
     /// Note that a negative mass would result in repellers.
+    #[allow(dead_code)]
     pub fn from_entity(entity: &Entity, mass: f32) -> Vec<PointAttractor> {
         entity
             .instances()

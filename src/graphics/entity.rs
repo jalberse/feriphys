@@ -67,6 +67,7 @@ impl Entity {
         InstanceRaw::update_buffer_from_vec(gpu, &self.instance_buffer, &self.instances);
     }
 
+    #[allow(dead_code)]
     pub fn instances(&self) -> &Vec<Instance> {
         &self.instances
     }
