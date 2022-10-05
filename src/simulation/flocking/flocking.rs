@@ -1,5 +1,9 @@
 use super::boid::{Boid, FlockingBoid, LeadBoid};
-use crate::{graphics::instance::Instance, gui, simulation::bounding_box::BoundingBox};
+use crate::{
+    graphics::instance::Instance,
+    gui,
+    simulation::{bounding_box::BoundingBox, point_attractor::PointAttractor},
+};
 
 use cgmath::{Rotation3, Vector3, Zero};
 
@@ -39,10 +43,15 @@ pub struct Simulation {
     boids: Vec<FlockingBoid>,
     lead_boids: Option<Vec<LeadBoid>>,
     bounding_box: BoundingBox,
+    attractors: Option<Vec<PointAttractor>>,
 }
 
 impl Simulation {
-    pub fn new(bounding_box: BoundingBox, lead_boids: Option<Vec<LeadBoid>>) -> Simulation {
+    pub fn new(
+        bounding_box: BoundingBox,
+        lead_boids: Option<Vec<LeadBoid>>,
+        attractors: Option<Vec<PointAttractor>>,
+    ) -> Simulation {
         let config = Config::default();
 
         let mut boids = Vec::with_capacity(25);
@@ -65,6 +74,7 @@ impl Simulation {
             boids,
             lead_boids,
             bounding_box,
+            attractors,
         }
     }
 
@@ -106,6 +116,15 @@ impl Simulation {
                             self.config.distance_weight_threshold,
                             self.config.distance_weight_threshold_falloff,
                         )
+                }
+            }
+
+            if let Some(point_attractors) = &self.attractors {
+                for attractor in point_attractors.iter() {
+                    // TODO we should maybe make the boid mass configurable, or at least likely
+                    //  store it with the boid.
+                    boid_acceleration =
+                        boid_acceleration + attractor.get_acceleration(boid.position(), 1.0);
                 }
             }
 
