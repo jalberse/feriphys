@@ -1,4 +1,4 @@
-use super::boid::Boid;
+use super::boid::{Boid, FlockingBoid, LeadBoid};
 use crate::{graphics::instance::Instance, gui, simulation::bounding_box::BoundingBox};
 
 use cgmath::{Rotation3, Vector3, Zero};
@@ -36,12 +36,13 @@ impl Default for Config {
 
 pub struct Simulation {
     config: Config,
-    boids: Vec<Boid>,
+    boids: Vec<FlockingBoid>,
+    lead_boids: Option<Vec<LeadBoid>>,
     bounding_box: BoundingBox,
 }
 
 impl Simulation {
-    pub fn new(bounding_box: BoundingBox) -> Simulation {
+    pub fn new(bounding_box: BoundingBox, lead_boids: Option<Vec<LeadBoid>>) -> Simulation {
         let config = Config::default();
 
         let mut boids = Vec::with_capacity(25);
@@ -56,12 +57,13 @@ impl Simulation {
                 y: rand::random(),
                 z: rand::random(),
             };
-            boids.push(Boid { position, velocity });
+            boids.push(FlockingBoid::new(position, velocity));
         }
 
         Simulation {
             config,
             boids,
+            lead_boids,
             bounding_box,
         }
     }
@@ -93,21 +95,39 @@ impl Simulation {
                     );
             }
 
-            let bounding_box_acceleration =
-                self.bounding_box.get_repelling_acceleration(boid.position);
+            if let Some(lead_boids) = &self.lead_boids {
+                for lead_boid in lead_boids.iter() {
+                    boid_acceleration = boid_acceleration
+                        + boid.get_acceleration(
+                            lead_boid,
+                            self.config.avoidance_factor,
+                            self.config.centering_factor,
+                            self.config.velocity_matching_factor,
+                            self.config.distance_weight_threshold,
+                            self.config.distance_weight_threshold_falloff,
+                        )
+                }
+            }
+
+            let bounding_box_acceleration = self
+                .bounding_box
+                .get_repelling_acceleration(boid.position());
 
             let boid_acceleration = boid_acceleration + bounding_box_acceleration;
 
-            let new_boid_position = boid.position + self.config.dt * boid.velocity;
-            let new_boid_velocity = boid.velocity + self.config.dt * boid_acceleration;
+            let new_boid_position = boid.position() + self.config.dt * boid.velocity();
+            let new_boid_velocity = boid.velocity() + self.config.dt * boid_acceleration;
 
-            new_state.push(Boid {
-                position: new_boid_position,
-                velocity: new_boid_velocity,
-            });
+            new_state.push(FlockingBoid::new(new_boid_position, new_boid_velocity));
         }
 
         self.boids = new_state;
+
+        if let Some(lead_boids) = &mut self.lead_boids {
+            for lead_boid in lead_boids.iter_mut() {
+                lead_boid.step(Duration::from_secs_f32(self.config.dt));
+            }
+        }
 
         self.get_timestep()
     }
@@ -133,7 +153,7 @@ impl Simulation {
 
         for boid in self.boids.iter() {
             instances.push(Instance {
-                position: boid.position,
+                position: boid.position(),
                 rotation: cgmath::Quaternion::from_axis_angle(
                     cgmath::Vector3::unit_z(),
                     cgmath::Deg(0.0),

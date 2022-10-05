@@ -1,2 +1,2 @@
-mod boid;
+pub mod boid;
 pub mod flocking;

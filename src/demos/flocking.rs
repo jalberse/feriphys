@@ -7,6 +7,7 @@ use crate::{
     simulation::{self, flocking::flocking},
 };
 
+use cgmath::Vector3;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -43,13 +44,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let bounding_box = simulation::bounding_box::BoundingBox {
-            x_range: (-10.0..10.0),
-            y_range: (-10.0..10.0),
-            z_range: (-10.0..10.0),
-        };
-
-        let simulation = flocking::Simulation::new(bounding_box);
+        let simulation = Self::create_sim();
 
         let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
         let instances = simulation.get_boid_instances();
@@ -68,6 +63,25 @@ impl State {
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
         }
+    }
+
+    fn create_sim() -> flocking::Simulation {
+        let bounding_box = simulation::bounding_box::BoundingBox {
+            x_range: (-10.0..10.0),
+            y_range: (-10.0..10.0),
+            z_range: (-10.0..10.0),
+        };
+
+        let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
+            Vector3::<f32> {
+                x: 3.0 * f32::cos(t),
+                y: 0.0,
+                z: 3.0 * f32::sin(t),
+            }
+        });
+        let lead_boids = Some(vec![lead_boid]);
+
+        flocking::Simulation::new(bounding_box, lead_boids)
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
