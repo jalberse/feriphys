@@ -63,7 +63,10 @@ impl LeadBoid {
 pub struct FlockingBoid {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
+    /// Weight for interactions with other boids
     weight: f32,
+    /// Mass for gravitational attraction to e.g. a PointAttractor
+    mass: f32,
 }
 
 impl Boid for FlockingBoid {
@@ -86,7 +89,12 @@ impl FlockingBoid {
             position,
             velocity,
             weight: 1.0,
+            mass: 1.0,
         }
+    }
+
+    pub fn mass(&self) -> f32 {
+        self.mass
     }
 
     pub fn distance(&self, other: &impl Boid) -> f32 {

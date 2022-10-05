@@ -121,10 +121,8 @@ impl Simulation {
 
             if let Some(point_attractors) = &self.attractors {
                 for attractor in point_attractors.iter() {
-                    // TODO we should maybe make the boid mass configurable, or at least likely
-                    //  store it with the boid.
-                    boid_acceleration =
-                        boid_acceleration + attractor.get_acceleration(boid.position(), 1.0);
+                    boid_acceleration = boid_acceleration
+                        + attractor.get_acceleration(boid.position(), boid.mass());
                 }
             }
 
