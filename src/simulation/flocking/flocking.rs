@@ -29,7 +29,7 @@ impl Default for Config {
             velocity_matching_factor: 1.0,
             distance_weight_threshold: 1.0,
             distance_weight_threshold_falloff: 1.0,
-            max_sight_angle: std::f32::consts::PI,
+            max_sight_angle: std::f32::consts::PI / 2.0,
         }
     }
 }
