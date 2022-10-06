@@ -20,8 +20,6 @@ pub struct LeadBoid {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
     weight: f32,
-    // TODO I think we'd store a function here, so callers can have arbitrary parametric paths to follow.
-    //  some fn(&Foo, &Foo)->() or whatever that we'd use in step() ? Maybe
 }
 
 impl Boid for LeadBoid {
