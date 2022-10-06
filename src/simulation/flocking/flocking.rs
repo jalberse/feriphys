@@ -1,4 +1,7 @@
-use super::boid::{Boid, FlockingBoid, LeadBoid};
+use super::{
+    boid::{Boid, FlockingBoid, LeadBoid},
+    obstacle::Obstacle,
+};
 use crate::{
     graphics::instance::Instance,
     gui,
@@ -22,6 +25,7 @@ pub struct Config {
     /// where pi means boids can see all other boids, including those directly behind
     /// them. The forward direction is in the direction of the boid's velocity.
     pub max_sight_angle: f32,
+    pub time_to_start_steering: Duration,
 }
 
 impl Default for Config {
@@ -29,11 +33,12 @@ impl Default for Config {
         Self {
             dt: Duration::from_millis(1).as_secs_f32(),
             avoidance_factor: 1.0,
-            centering_factor: 1.0,
+            centering_factor: 0.1,
             velocity_matching_factor: 1.0,
             distance_weight_threshold: 1.0,
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
+            time_to_start_steering: Duration::from_secs(3),
         }
     }
 }
@@ -43,6 +48,7 @@ pub struct Simulation {
     boids: Vec<FlockingBoid>,
     lead_boids: Option<Vec<LeadBoid>>,
     bounding_box: BoundingBox,
+    obstacles: Option<Vec<Obstacle>>,
     attractors: Option<Vec<PointAttractor>>,
 }
 
@@ -50,6 +56,7 @@ impl Simulation {
     pub fn new(
         bounding_box: BoundingBox,
         lead_boids: Option<Vec<LeadBoid>>,
+        obstacles: Option<Vec<Obstacle>>,
         attractors: Option<Vec<PointAttractor>>,
     ) -> Simulation {
         let config = Config::default();
@@ -74,6 +81,7 @@ impl Simulation {
             boids,
             lead_boids,
             bounding_box,
+            obstacles,
             attractors,
         }
     }
@@ -84,6 +92,11 @@ impl Simulation {
 
         for boid in self.boids.iter() {
             let mut boid_acceleration = Vector3::<f32>::zero();
+
+            // TODO each of these little sections should be their own help functions, instead of
+            //   having these explanatory comments.
+
+            // React to other boids
             for other_boid in self.boids.iter() {
                 if other_boid == boid
                     || boid.distance(other_boid)
@@ -105,6 +118,7 @@ impl Simulation {
                     );
             }
 
+            // Follow our lead boids
             if let Some(lead_boids) = &self.lead_boids {
                 for lead_boid in lead_boids.iter() {
                     boid_acceleration = boid_acceleration
@@ -119,6 +133,7 @@ impl Simulation {
                 }
             }
 
+            // React to attractors/repellers
             if let Some(point_attractors) = &self.attractors {
                 for attractor in point_attractors.iter() {
                     boid_acceleration = boid_acceleration
@@ -126,11 +141,45 @@ impl Simulation {
                 }
             }
 
+            // Accelerate to avoid the bounding box
             let bounding_box_acceleration = self
                 .bounding_box
                 .get_repelling_acceleration(boid.position());
 
-            let boid_acceleration = boid_acceleration + bounding_box_acceleration;
+            boid_acceleration = boid_acceleration + bounding_box_acceleration;
+
+            // Steer to avoid obstacles.
+            // Note: Because collisions with obstacles are visually very apparent,
+            //   this *overrides* any previous acceleration if we must steer.
+            //   As though the boid agents ignore everything, except to avoid hitting a wall.
+            //   This still looks smooth in the boid motion, since it's a discontinuity
+            //   in the second derivative.
+            if let Some(obstacles) = &self.obstacles {
+                // Find the first obstacle we might hit, which is the one we'll steer to avoid.
+                let closest_obstacle_maybe = obstacles.iter().min_by(|x, y| {
+                    let x_time = match x.get_time_to_plane_collision(boid) {
+                        Some(duration) => duration,
+                        None => Duration::MAX,
+                    };
+                    let y_time = match y.get_time_to_plane_collision(boid) {
+                        Some(duration) => duration,
+                        None => Duration::MAX,
+                    };
+                    x_time.cmp(&y_time)
+                });
+                if let Some(closest_obstacle) = closest_obstacle_maybe {
+                    // The list of obstacles wasn't empty
+                    if let Some(time_to_plane_collision) =
+                        closest_obstacle.get_time_to_plane_collision(boid)
+                    {
+                        // There's at least one obstacle the boid may eventually hit
+                        if time_to_plane_collision < self.config.time_to_start_steering {
+                            // We would hit this relatively soon, steer to avoid the collision
+                            boid_acceleration = closest_obstacle.get_acceleration_to_avoid(boid);
+                        }
+                    }
+                }
+            }
 
             let new_boid_position = boid.position() + self.config.dt * boid.velocity();
             let new_boid_velocity = boid.velocity() + self.config.dt * boid_acceleration;
@@ -163,6 +212,7 @@ impl Simulation {
         self.config.distance_weight_threshold_falloff =
             ui_config_state.distance_weight_threshold_falloff;
         self.config.max_sight_angle = ui_config_state.max_sight_angle;
+        self.config.time_to_start_steering = ui_config_state.time_to_start_steering;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {

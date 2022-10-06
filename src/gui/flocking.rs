@@ -74,7 +74,7 @@ impl FlockingUi {
     const AVOIDANCE_FACTOR_MAX: f32 = 10.0;
 
     const CENTERING_FACTOR_MIN: f32 = 0.0;
-    const CENTERING_FACTOR_MAX: f32 = 10.0;
+    const CENTERING_FACTOR_MAX: f32 = 2.0;
 
     const VELOCITY_MATCHING_FACTOR_MIN: f32 = 0.0;
     const VELOCITY_MATHCING_FACTOR_MAX: f32 = 10.0;

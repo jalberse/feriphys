@@ -1,13 +1,16 @@
 use crate::{
     graphics::{
-        self, camera::CameraBundle, entity::Entity, forms, gpu_interface::GPUInterface, light,
-        scene::Scene, texture,
+        self, camera::CameraBundle, entity::Entity, forms, gpu_interface::GPUInterface,
+        instance::Instance, light, scene::Scene, texture,
     },
     gui,
-    simulation::{self, flocking::flocking},
+    simulation::{
+        self,
+        flocking::{flocking, obstacle::Obstacle},
+    },
 };
 
-use cgmath::Vector3;
+use cgmath::{Rotation3, Vector3};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -44,13 +47,28 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let simulation = Self::create_sim();
+        let cube = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
+        let cube_instances = vec![Instance {
+            position: Vector3::<f32> {
+                x: -6.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            scale: 1.0,
+        }];
+        let cube_entity = Entity::new(&gpu, cube, cube_instances);
+
+        let simulation = Self::create_sim(&cube_entity);
 
         let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
         let instances = simulation.get_boid_instances();
         let boids_entity = Entity::new(&gpu, sphere, instances);
 
-        let scene = Scene::new(Some(vec![boids_entity]), None);
+        let scene = Scene::new(Some(vec![boids_entity, cube_entity]), None);
 
         Self {
             gpu,
@@ -65,7 +83,7 @@ impl State {
         }
     }
 
-    fn create_sim() -> flocking::Simulation {
+    fn create_sim(obstacle_entity: &Entity) -> flocking::Simulation {
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-10.0..10.0),
             y_range: (-10.0..10.0),
@@ -74,14 +92,16 @@ impl State {
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
-                x: 3.0 * f32::cos(t),
+                x: 6.0 * f32::cos(t / 2.0),
                 y: 0.0,
-                z: 3.0 * f32::sin(t),
+                z: 6.0 * f32::sin(t / 2.0),
             }
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        flocking::Simulation::new(bounding_box, lead_boids, None)
+        let obstacles = Obstacle::from_entity(obstacle_entity, 1.8);
+
+        flocking::Simulation::new(bounding_box, lead_boids, Some(obstacles), None)
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
