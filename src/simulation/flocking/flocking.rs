@@ -26,6 +26,10 @@ pub struct Config {
     /// them. The forward direction is in the direction of the boid's velocity.
     pub max_sight_angle: f32,
     pub time_to_start_steering: Duration,
+    /// If true, then when a boid is steering to avoid an obstacle, it will ignore
+    /// other sources of acceleration. This can help prevent cases where
+    /// a boid will clip through obstacles, but can cause unnatural motion.
+    pub steering_overrides: bool,
 }
 
 impl Default for Config {
@@ -39,6 +43,7 @@ impl Default for Config {
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
             time_to_start_steering: Duration::from_secs(3),
+            steering_overrides: false,
         }
     }
 }
@@ -174,12 +179,14 @@ impl Simulation {
                     {
                         // There's at least one obstacle the boid may eventually hit
                         if time_to_plane_collision < self.config.time_to_start_steering {
-                            // TODO We may want to make an option: steering overrides acceleration, or steering acceleration just gets added.
-                            // In my opinion, overriding acceleration for steering looks nicer, but I suppose it's nice to
-                            // have the option in the interface.
-
                             // We would hit this relatively soon, steer to avoid the collision
-                            boid_acceleration = closest_obstacle.get_acceleration_to_avoid(boid);
+                            let base_accel = if self.config.steering_overrides {
+                                Vector3::<f32>::zero()
+                            } else {
+                                boid_acceleration
+                            };
+                            boid_acceleration =
+                                base_accel + closest_obstacle.get_acceleration_to_avoid(boid);
                         }
                     }
                 }
@@ -217,6 +224,7 @@ impl Simulation {
             ui_config_state.distance_weight_threshold_falloff;
         self.config.max_sight_angle = ui_config_state.max_sight_angle;
         self.config.time_to_start_steering = ui_config_state.time_to_start_steering;
+        self.config.steering_overrides = ui_config_state.steering_overrides;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {
