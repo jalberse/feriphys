@@ -99,7 +99,7 @@ impl State {
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let obstacles = Obstacle::from_entity(obstacle_entity, 1.8);
+        let obstacles = Obstacle::from_entity(obstacle_entity, 1.75);
 
         flocking::Simulation::new(bounding_box, lead_boids, Some(obstacles), None)
     }

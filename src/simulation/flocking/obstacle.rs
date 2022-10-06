@@ -22,7 +22,7 @@ impl Obstacle {
         }
         let (velocity_i, _) = self.get_velocity_components(boid);
         Some(Duration::from_secs_f32(
-            (self.position - boid.position()).magnitude() / velocity_i.magnitude(),
+            ((self.position - boid.position()).magnitude() - self.radius) / velocity_i.magnitude(),
         ))
     }
 
