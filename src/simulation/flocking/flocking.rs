@@ -174,6 +174,10 @@ impl Simulation {
                     {
                         // There's at least one obstacle the boid may eventually hit
                         if time_to_plane_collision < self.config.time_to_start_steering {
+                            // TODO We may want to make an option: steering overrides acceleration, or steering acceleration just gets added.
+                            // In my opinion, overriding acceleration for steering looks nicer, but I suppose it's nice to
+                            // have the option in the interface.
+
                             // We would hit this relatively soon, steer to avoid the collision
                             boid_acceleration = closest_obstacle.get_acceleration_to_avoid(boid);
                         }
