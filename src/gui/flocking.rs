@@ -1,6 +1,6 @@
 use crate::gui::Ui;
 use crate::simulation::flocking::flocking;
-use egui::Slider;
+use egui::{Checkbox, Slider};
 
 pub struct FlockingUi {
     sim_config: flocking::Config,
@@ -62,6 +62,10 @@ impl Ui for FlockingUi {
                 )
                 .text("Max Sight Angle"),
             );
+            ui.add(Checkbox::new(
+                &mut self.sim_config.steering_overrides,
+                "Steering Overrides",
+            ));
         });
     }
 }

@@ -26,6 +26,10 @@ pub struct Config {
     /// them. The forward direction is in the direction of the boid's velocity.
     pub max_sight_angle: f32,
     pub time_to_start_steering: Duration,
+    /// If true, then when a boid is steering to avoid an obstacle, it will ignore
+    /// other sources of acceleration. This can help prevent cases where
+    /// a boid will clip through obstacles, but can cause unnatural motion.
+    pub steering_overrides: bool,
 }
 
 impl Default for Config {
@@ -39,6 +43,7 @@ impl Default for Config {
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
             time_to_start_steering: Duration::from_secs(3),
+            steering_overrides: false,
         }
     }
 }
@@ -91,99 +96,17 @@ impl Simulation {
         let mut new_state = Vec::with_capacity(self.boids.len());
 
         for boid in self.boids.iter() {
-            let mut boid_acceleration = Vector3::<f32>::zero();
-
-            // TODO each of these little sections should be their own help functions, instead of
-            //   having these explanatory comments.
-
-            // React to other boids
-            for other_boid in self.boids.iter() {
-                if other_boid == boid
-                    || boid.distance(other_boid)
-                        > self.config.distance_weight_threshold
-                            + self.config.distance_weight_threshold_falloff
-                    || boid.sight_angle(other_boid) > self.config.max_sight_angle
-                {
-                    continue;
-                }
-
-                boid_acceleration = boid_acceleration
-                    + boid.get_acceleration(
-                        other_boid,
-                        self.config.avoidance_factor,
-                        self.config.centering_factor,
-                        self.config.velocity_matching_factor,
-                        self.config.distance_weight_threshold,
-                        self.config.distance_weight_threshold_falloff,
-                    );
-            }
-
-            // Follow our lead boids
-            if let Some(lead_boids) = &self.lead_boids {
-                for lead_boid in lead_boids.iter() {
-                    boid_acceleration = boid_acceleration
-                        + boid.get_acceleration(
-                            lead_boid,
-                            self.config.avoidance_factor,
-                            self.config.centering_factor,
-                            self.config.velocity_matching_factor,
-                            self.config.distance_weight_threshold,
-                            self.config.distance_weight_threshold_falloff,
-                        )
-                }
-            }
-
-            // React to attractors/repellers
-            if let Some(point_attractors) = &self.attractors {
-                for attractor in point_attractors.iter() {
-                    boid_acceleration = boid_acceleration
-                        + attractor.get_acceleration(boid.position(), boid.mass());
-                }
-            }
-
-            // Accelerate to avoid the bounding box
-            let bounding_box_acceleration = self
-                .bounding_box
-                .get_repelling_acceleration(boid.position());
-
-            boid_acceleration = boid_acceleration + bounding_box_acceleration;
-
-            // Steer to avoid obstacles.
-            // Note: Because collisions with obstacles are visually very apparent,
-            //   this *overrides* any previous acceleration if we must steer.
-            //   As though the boid agents ignore everything, except to avoid hitting a wall.
-            //   This still looks smooth in the boid motion, since it's a discontinuity
-            //   in the second derivative.
-            if let Some(obstacles) = &self.obstacles {
-                // Find the first obstacle we might hit, which is the one we'll steer to avoid.
-                let closest_obstacle_maybe = obstacles.iter().min_by(|x, y| {
-                    let x_time = match x.get_time_to_plane_collision(boid) {
-                        Some(duration) => duration,
-                        None => Duration::MAX,
-                    };
-                    let y_time = match y.get_time_to_plane_collision(boid) {
-                        Some(duration) => duration,
-                        None => Duration::MAX,
-                    };
-                    x_time.cmp(&y_time)
-                });
-                if let Some(closest_obstacle) = closest_obstacle_maybe {
-                    // The list of obstacles wasn't empty
-                    if let Some(time_to_plane_collision) =
-                        closest_obstacle.get_time_to_plane_collision(boid)
-                    {
-                        // There's at least one obstacle the boid may eventually hit
-                        if time_to_plane_collision < self.config.time_to_start_steering {
-                            // TODO We may want to make an option: steering overrides acceleration, or steering acceleration just gets added.
-                            // In my opinion, overriding acceleration for steering looks nicer, but I suppose it's nice to
-                            // have the option in the interface.
-
-                            // We would hit this relatively soon, steer to avoid the collision
-                            boid_acceleration = closest_obstacle.get_acceleration_to_avoid(boid);
-                        }
-                    }
-                }
-            }
+            let boid_acceleration = if self.config.steering_overrides {
+                self.get_acceleration_from_steering(boid)
+            } else {
+                self.get_acceleration_from_boids(boid)
+                    + self.get_acceleration_from_lead_boids(boid)
+                    + self.get_acceleration_from_attractors(boid)
+                    + self
+                        .bounding_box
+                        .get_repelling_acceleration(boid.position())
+                    + self.get_acceleration_from_steering(boid)
+            };
 
             let new_boid_position = boid.position() + self.config.dt * boid.velocity();
             let new_boid_velocity = boid.velocity() + self.config.dt * boid_acceleration;
@@ -202,6 +125,88 @@ impl Simulation {
         self.get_timestep()
     }
 
+    fn get_acceleration_from_boids(&self, boid: &FlockingBoid) -> Vector3<f32> {
+        // TODO use a functional approach
+        let mut total_acceleration = Vector3::<f32>::zero();
+        for other_boid in self.boids.iter() {
+            if other_boid == boid
+                || boid.distance(other_boid)
+                    > self.config.distance_weight_threshold
+                        + self.config.distance_weight_threshold_falloff
+                || boid.sight_angle(other_boid) > self.config.max_sight_angle
+            {
+                continue;
+            }
+
+            total_acceleration += boid.get_acceleration(
+                other_boid,
+                self.config.avoidance_factor,
+                self.config.centering_factor,
+                self.config.velocity_matching_factor,
+                self.config.distance_weight_threshold,
+                self.config.distance_weight_threshold_falloff,
+            );
+        }
+        total_acceleration
+    }
+
+    fn get_acceleration_from_lead_boids(&self, boid: &FlockingBoid) -> Vector3<f32> {
+        // TODO use functional approach
+        let mut total_accel = Vector3::<f32>::zero();
+        if let Some(lead_boids) = &self.lead_boids {
+            for lead_boid in lead_boids.iter() {
+                total_accel += boid.get_acceleration(
+                    lead_boid,
+                    self.config.avoidance_factor,
+                    self.config.centering_factor,
+                    self.config.velocity_matching_factor,
+                    self.config.distance_weight_threshold,
+                    self.config.distance_weight_threshold_falloff,
+                )
+            }
+        }
+        total_accel
+    }
+
+    fn get_acceleration_from_attractors(&self, boid: &FlockingBoid) -> Vector3<f32> {
+        let mut total_accel = Vector3::<f32>::zero();
+        if let Some(point_attractors) = &self.attractors {
+            for attractor in point_attractors.iter() {
+                total_accel += attractor.get_acceleration(boid.position(), boid.mass());
+            }
+        }
+        total_accel
+    }
+
+    fn get_acceleration_from_steering(&self, boid: &FlockingBoid) -> Vector3<f32> {
+        if let Some(obstacles) = &self.obstacles {
+            // Find the first obstacle we might hit, which is the one we'll steer to avoid.
+            let closest_obstacle_maybe = obstacles.iter().min_by(|x, y| {
+                let x_time = match x.get_time_to_plane_collision(boid) {
+                    Some(duration) => duration,
+                    None => Duration::MAX,
+                };
+                let y_time = match y.get_time_to_plane_collision(boid) {
+                    Some(duration) => duration,
+                    None => Duration::MAX,
+                };
+                x_time.cmp(&y_time)
+            });
+            if let Some(closest_obstacle) = closest_obstacle_maybe {
+                // The list of obstacles wasn't empty
+                if let Some(time_to_plane_collision) =
+                    closest_obstacle.get_time_to_plane_collision(boid)
+                {
+                    // There's at least one obstacle the boid may eventually hit
+                    if time_to_plane_collision < self.config.time_to_start_steering {
+                        return closest_obstacle.get_acceleration_to_avoid(boid);
+                    }
+                }
+            }
+        }
+        Vector3::<f32>::zero()
+    }
+
     pub fn get_timestep(&self) -> Duration {
         Duration::from_secs_f32(self.config.dt)
     }
@@ -217,6 +222,7 @@ impl Simulation {
             ui_config_state.distance_weight_threshold_falloff;
         self.config.max_sight_angle = ui_config_state.max_sight_angle;
         self.config.time_to_start_steering = ui_config_state.time_to_start_steering;
+        self.config.steering_overrides = ui_config_state.steering_overrides;
     }
 
     pub fn get_boid_instances(&self) -> Vec<Instance> {
