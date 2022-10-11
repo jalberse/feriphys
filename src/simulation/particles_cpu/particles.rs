@@ -1,5 +1,5 @@
 use crate::{
-    graphics::entity::Entity, graphics::forms, graphics::gpu_interface::GPUInterface,
+    graphics::entity::ColoredMeshEntity, graphics::forms, graphics::gpu_interface::GPUInterface,
     graphics::instance::Instance, graphics::model::ColoredMesh, gui,
 };
 
@@ -250,7 +250,7 @@ impl Simulation {
         std::time::Duration::from_secs_f32(self.config.dt)
     }
 
-    pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
+    pub fn get_particles_entity(&self, gpu: &GPUInterface) -> ColoredMeshEntity {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
         let mut instances = Vec::<Instance>::new();
@@ -270,7 +270,7 @@ impl Simulation {
             instances.push(instance);
         }
 
-        Entity::new(&gpu, mesh, instances)
+        ColoredMeshEntity::new(&gpu, mesh, instances)
     }
 
     pub fn get_particles_instances(&self) -> Vec<Instance> {

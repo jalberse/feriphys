@@ -1,4 +1,4 @@
-use crate::graphics::entity::Entity;
+use crate::graphics::entity::ColoredMeshEntity;
 use crate::graphics::gpu_interface::GPUInterface;
 use crate::graphics::instance::Instance;
 use wgpu::BindGroup;
@@ -8,12 +8,15 @@ pub struct Scene {
     //   for the entities field, so we may get bad behavior if order flips. WE should make a type to differentiate.
     //   Or reeally, Entity might be best as a typed Enum - ParticleEntity, ColoredMeshEntity (or something)
     //   so that the Scene just stores a list of entities. The behavior for drawing them etc is handled within each Entity variant.
-    entities: Option<Vec<Entity>>,
-    particles: Option<Vec<Entity>>,
+    entities: Option<Vec<ColoredMeshEntity>>,
+    particles: Option<Vec<ColoredMeshEntity>>,
 }
 
 impl Scene {
-    pub fn new(entities: Option<Vec<Entity>>, particles: Option<Vec<Entity>>) -> Scene {
+    pub fn new(
+        entities: Option<Vec<ColoredMeshEntity>>,
+        particles: Option<Vec<ColoredMeshEntity>>,
+    ) -> Scene {
         Scene {
             entities,
             particles,

@@ -1,6 +1,6 @@
 use cgmath::{InnerSpace, Vector3};
 
-use crate::graphics::entity::Entity;
+use crate::graphics::entity::ColoredMeshEntity;
 
 use super::consts::GRAVITY;
 
@@ -24,7 +24,7 @@ impl PointAttractor {
     /// The mass of the objects is scaled by each Instance's scale.
     /// Note that a negative mass would result in repellers.
     #[allow(dead_code)]
-    pub fn from_entity(entity: &Entity, mass: f32) -> Vec<PointAttractor> {
+    pub fn from_entity(entity: &ColoredMeshEntity, mass: f32) -> Vec<PointAttractor> {
         entity
             .instances()
             .iter()

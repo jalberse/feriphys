@@ -1,6 +1,6 @@
 use crate::graphics;
 use crate::graphics::camera::CameraBundle;
-use crate::graphics::entity::Entity;
+use crate::graphics::entity::ColoredMeshEntity;
 use crate::graphics::forms;
 use crate::graphics::gpu_interface::GPUInterface;
 use crate::graphics::instance::Instance;
@@ -63,7 +63,7 @@ impl State {
             ),
             scale: 1.0,
         });
-        let obstacle_entity = Entity::new(&gpu, obstacle, instances);
+        let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances);
 
         let particles_entity = simulation_state.get_particles_entity(&gpu);
         let scene = Scene::new(Some(vec![obstacle_entity]), Some(vec![particles_entity]));

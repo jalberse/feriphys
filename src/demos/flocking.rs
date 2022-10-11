@@ -1,6 +1,6 @@
 use crate::{
     graphics::{
-        self, camera::CameraBundle, entity::Entity, forms, gpu_interface::GPUInterface,
+        self, camera::CameraBundle, entity::ColoredMeshEntity, forms, gpu_interface::GPUInterface,
         instance::Instance, light, scene::Scene, texture,
     },
     gui,
@@ -60,13 +60,25 @@ impl State {
             ),
             scale: 1.0,
         }];
-        let cube_entity = Entity::new(&gpu, cube, cube_instances);
+        let cube_entity = ColoredMeshEntity::new(&gpu, cube, cube_instances);
 
         let simulation = Self::create_sim(&cube_entity);
 
-        let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+        // let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
+        // let fish_model = resources::load_model(
+        //     "fish.obj",
+        //     &gpu.device,
+        //     &gpu.queue,
+        //     &texture_bind_group_layout,
+        // )
+        // .unwrap();
         let instances = simulation.get_boid_instances();
-        let boids_entity = Entity::new(&gpu, sphere, instances);
+
+        // TODO we need to change our render pipeline to use models, not ColoredMeshes (i.e. use the different shader etc).
+        //   That means we need to change our obstacle, too, to some textured thing (or else have two render pipelines, I guess, but unifying is simpler for now)
+
+        let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
+        let boids_entity = ColoredMeshEntity::new(&gpu, sphere, instances);
 
         let scene = Scene::new(Some(vec![boids_entity, cube_entity]), None);
 
@@ -83,7 +95,7 @@ impl State {
         }
     }
 
-    fn create_sim(obstacle_entity: &Entity) -> flocking::Simulation {
+    fn create_sim(obstacle_entity: &ColoredMeshEntity) -> flocking::Simulation {
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-10.0..10.0),
             y_range: (-10.0..10.0),
