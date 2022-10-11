@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use cgmath::{num_traits::Signed, InnerSpace, Vector3, Zero};
 
-use crate::graphics::entity::ColoredMeshEntity;
+use crate::graphics::entity::Entity;
 
 use super::boid::{Boid, FlockingBoid};
 
@@ -44,7 +44,7 @@ impl Obstacle {
         }
     }
 
-    pub fn from_entity(entity: &ColoredMeshEntity, radius: f32) -> Vec<Obstacle> {
+    pub fn from_entity(entity: &Entity, radius: f32) -> Vec<Obstacle> {
         entity
             .instances()
             .iter()

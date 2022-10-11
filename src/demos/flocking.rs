@@ -1,14 +1,7 @@
 use crate::{
     graphics::{
-        self,
-        camera::CameraBundle,
-        entity::{ColoredMeshEntity, Entity},
-        forms,
-        gpu_interface::GPUInterface,
-        instance::Instance,
-        light, resources,
-        scene::Scene,
-        texture,
+        self, camera::CameraBundle, entity::Entity, gpu_interface::GPUInterface,
+        instance::Instance, light, resources, scene::Scene, texture,
     },
     gui,
     simulation::{
@@ -60,8 +53,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let cube = forms::get_cube(&gpu.device, [0.9, 0.1, 0.1]);
-        let cube_instances = vec![Instance {
+        let coral_instances = vec![Instance {
             position: Vector3::<f32> {
                 x: -6.0,
                 y: 0.0,
@@ -73,11 +65,19 @@ impl State {
             ),
             scale: 1.0,
         }];
-        let cube_entity = ColoredMeshEntity::new(&gpu, cube, cube_instances);
-
-        let simulation = Self::create_sim(&cube_entity);
-
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
+
+        let coral_model = resources::load_model(
+            "Coral0.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
+        let coral_entity = Entity::new(&gpu, coral_model, coral_instances);
+
+        let simulation = Self::create_sim(&coral_entity);
+
         let fish_model = resources::load_model(
             "blue_fish.obj",
             &gpu.device,
@@ -89,7 +89,7 @@ impl State {
 
         let boids_entity = Entity::new(&gpu, fish_model, instances);
 
-        let scene = Scene::new(Some(vec![boids_entity]), Some(vec![cube_entity]), None);
+        let scene = Scene::new(Some(vec![boids_entity, coral_entity]), None, None);
 
         Self {
             gpu,
@@ -105,11 +105,11 @@ impl State {
         }
     }
 
-    fn create_sim(obstacle_entity: &ColoredMeshEntity) -> flocking::Simulation {
+    fn create_sim(obstacle_entity: &Entity) -> flocking::Simulation {
         let bounding_box = simulation::bounding_box::BoundingBox {
-            x_range: (-10.0..10.0),
-            y_range: (-10.0..10.0),
-            z_range: (-10.0..10.0),
+            x_range: (-30.0..30.0),
+            y_range: (-30.0..30.0),
+            z_range: (-30.0..30.0),
         };
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
@@ -121,7 +121,7 @@ impl State {
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let obstacles = Obstacle::from_entity(obstacle_entity, 1.75);
+        let obstacles = Obstacle::from_entity(obstacle_entity, 2.0);
 
         flocking::Simulation::new(bounding_box, lead_boids, Some(obstacles), None)
     }
