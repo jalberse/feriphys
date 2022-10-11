@@ -8,7 +8,7 @@ use crate::{
     simulation::{bounding_box::BoundingBox, point_attractor::PointAttractor},
 };
 
-use cgmath::{Rotation3, Vector3, Zero};
+use cgmath::{InnerSpace, Vector3, Zero};
 
 use std::time::Duration;
 
@@ -231,9 +231,10 @@ impl Simulation {
         for boid in self.boids.iter() {
             instances.push(Instance {
                 position: boid.position(),
-                rotation: cgmath::Quaternion::from_axis_angle(
+                rotation: cgmath::Quaternion::from_arc(
                     cgmath::Vector3::unit_z(),
-                    cgmath::Deg(0.0),
+                    boid.velocity().normalize(),
+                    None,
                 ),
                 scale: 0.1,
             });
