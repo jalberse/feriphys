@@ -163,7 +163,6 @@ impl Simulation {
             let acceleration_wind =
                 particle.drag * self.config.wind * self.config.wind.magnitude() / particle.mass;
 
-            // TODO: Calculate acceleration due to some vortex force.
             let center_line_unit_vec = Vector3::<f32>::unit_y();
             let displacement_on_center_line = (particle.position - Vector3::<f32>::zero())
                 .dot(center_line_unit_vec)

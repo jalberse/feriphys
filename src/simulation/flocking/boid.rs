@@ -4,11 +4,6 @@ use cgmath::{InnerSpace, Vector3, Zero};
 
 use crate::simulation::parametric::Parametric;
 
-// TODO Add a LeadBoid struct which implements Boid. It should have a higher weight (we probably want this
-//    to be configurable through UI for demo). It should also have a step() function to follow a scripted path.
-//    We'll loop over a list of LeadBoids for each FlockingBoid in the simulation and get forces by calling
-//    flocking_boid.get_acceleration(lead_boid).
-
 pub trait Boid {
     fn position(&self) -> Vector3<f32>;
     fn velocity(&self) -> Vector3<f32>;
