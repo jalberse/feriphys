@@ -1,7 +1,14 @@
 use crate::{
     graphics::{
-        self, camera::CameraBundle, entity::ColoredMeshEntity, forms, gpu_interface::GPUInterface,
-        instance::Instance, light, scene::Scene, texture,
+        self,
+        camera::CameraBundle,
+        entity::{ColoredMeshEntity, Entity},
+        forms,
+        gpu_interface::GPUInterface,
+        instance::Instance,
+        light, resources,
+        scene::Scene,
+        texture,
     },
     gui,
     simulation::{
@@ -20,7 +27,8 @@ use winit::{
 
 struct State {
     gpu: GPUInterface,
-    render_pipeline: wgpu::RenderPipeline,
+    model_render_pipeline: wgpu::RenderPipeline,
+    colored_mesh_render_pipeline: wgpu::RenderPipeline,
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
@@ -41,7 +49,12 @@ impl State {
         let (light_bind_group_layout, light_bind_group) =
             light::create_light_bind_group(&gpu, light_uniform);
 
-        let render_pipeline = graphics::util::create_colored_mesh_render_pipeline(
+        let model_render_pipeline = graphics::util::create_model_render_pipeline(
+            &gpu,
+            &camera_bundle,
+            &light_bind_group_layout,
+        );
+        let colored_mesh_render_pipeline = graphics::util::create_colored_mesh_render_pipeline(
             &gpu,
             &camera_bundle,
             &light_bind_group_layout,
@@ -64,27 +77,27 @@ impl State {
 
         let simulation = Self::create_sim(&cube_entity);
 
-        // let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
-        // let fish_model = resources::load_model(
-        //     "fish.obj",
-        //     &gpu.device,
-        //     &gpu.queue,
-        //     &texture_bind_group_layout,
-        // )
-        // .unwrap();
+        let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
+        let fish_model = resources::load_model(
+            "fish.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
         let instances = simulation.get_boid_instances();
 
         // TODO we need to change our render pipeline to use models, not ColoredMeshes (i.e. use the different shader etc).
         //   That means we need to change our obstacle, too, to some textured thing (or else have two render pipelines, I guess, but unifying is simpler for now)
 
-        let sphere = forms::generate_sphere(&gpu.device, [0.2, 0.8, 0.2], 1.0, 32, 32);
-        let boids_entity = ColoredMeshEntity::new(&gpu, sphere, instances);
+        let boids_entity = Entity::new(&gpu, fish_model, instances);
 
-        let scene = Scene::new(Some(vec![boids_entity, cube_entity]), None);
+        let scene = Scene::new(Some(vec![boids_entity]), Some(vec![cube_entity]), None);
 
         Self {
             gpu,
-            render_pipeline,
+            model_render_pipeline,
+            colored_mesh_render_pipeline,
             depth_texture,
             camera_bundle,
             light_bind_group,
@@ -213,11 +226,15 @@ impl State {
                 }),
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            self.scene.draw(
-                &self.gpu,
+            render_pass.set_pipeline(&self.model_render_pipeline);
+            self.scene.draw_entities(
                 &mut render_pass,
-                self.camera_bundle.camera.position,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
+            render_pass.set_pipeline(&self.colored_mesh_render_pipeline);
+            self.scene.draw_colored_mesh_entities(
+                &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );

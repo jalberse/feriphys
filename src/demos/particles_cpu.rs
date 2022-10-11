@@ -66,7 +66,11 @@ impl State {
         let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances);
 
         let particles_entity = simulation_state.get_particles_entity(&gpu);
-        let scene = Scene::new(Some(vec![obstacle_entity]), Some(vec![particles_entity]));
+        let scene = Scene::new(
+            None,
+            Some(vec![obstacle_entity]),
+            Some(vec![particles_entity]),
+        );
 
         Self {
             gpu,
@@ -131,8 +135,12 @@ impl State {
         }
 
         let particle_instances = self.simulation_state.get_particles_instances();
-        self.scene
-            .update_particle_instances(&self.gpu, 0, particle_instances);
+        self.scene.update_particle_instances(
+            &self.gpu,
+            0,
+            particle_instances,
+            self.camera_bundle.camera.position,
+        );
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -180,10 +188,8 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            self.scene.draw(
-                &self.gpu,
+            self.scene.draw_colored_mesh_entities(
                 &mut render_pass,
-                self.camera_bundle.camera.position,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );
