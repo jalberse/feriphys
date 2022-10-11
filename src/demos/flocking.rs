@@ -79,16 +79,13 @@ impl State {
 
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
         let fish_model = resources::load_model(
-            "fish.obj",
+            "blue_fish.obj",
             &gpu.device,
             &gpu.queue,
             &texture_bind_group_layout,
         )
         .unwrap();
         let instances = simulation.get_boid_instances();
-
-        // TODO we need to change our render pipeline to use models, not ColoredMeshes (i.e. use the different shader etc).
-        //   That means we need to change our obstacle, too, to some textured thing (or else have two render pipelines, I guess, but unifying is simpler for now)
 
         let boids_entity = Entity::new(&gpu, fish_model, instances);
 

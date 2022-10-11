@@ -8,7 +8,7 @@ use crate::{
     graphics::texture,
 };
 
-use super::camera::Projection;
+use super::{camera::Projection, model::ModelVertex};
 
 pub fn create_render_pipeline(
     device: &wgpu::Device,
@@ -123,7 +123,7 @@ pub fn create_model_render_pipeline(
         &layout,
         gpu.config.format,
         Some(texture::Texture::DEPTH_FORMAT),
-        &[ColoredVertex::desc(), instance::InstanceRaw::desc::<5>()],
+        &[ModelVertex::desc(), instance::InstanceRaw::desc::<5>()],
         shader,
     )
 }
