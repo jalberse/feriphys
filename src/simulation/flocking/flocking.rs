@@ -39,8 +39,8 @@ impl Default for Config {
             dt: Duration::from_millis(1).as_secs_f32(),
             avoidance_factor: 1.0,
             centering_factor: 0.1,
-            velocity_matching_factor: 1.0,
-            distance_weight_threshold: 5.0,
+            velocity_matching_factor: 0.5,
+            distance_weight_threshold: 15.0,
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
             max_sight_angle_to_lead_boid: std::f32::consts::PI,
@@ -61,7 +61,7 @@ pub struct Simulation {
 
 impl Simulation {
     pub fn new(
-        initial_position: Vector3<f32>,
+        initial_positions: Vec<Vector3<f32>>,
         num_boids: u32,
         bounding_box: Option<BoundingBox>,
         lead_boids: Option<Vec<LeadBoid>>,
@@ -70,19 +70,22 @@ impl Simulation {
     ) -> Simulation {
         let config = Config::default();
 
-        let mut boids = Vec::with_capacity(25);
-        for _ in 0..num_boids {
-            let position = Vector3::<f32> {
-                x: initial_position.x + rand::random::<f32>(),
-                y: initial_position.y + rand::random::<f32>(),
-                z: initial_position.z + rand::random::<f32>(),
-            };
-            let velocity = Vector3::<f32> {
-                x: rand::random(),
-                y: rand::random(),
-                z: rand::random(),
-            };
-            boids.push(FlockingBoid::new(position, velocity));
+        let mut boids = Vec::with_capacity(num_boids as usize);
+        // TODO if initial_positions is empty, this crashes. Fix that.
+        for position in &initial_positions {
+            for _ in 0..num_boids / initial_positions.len() as u32 {
+                let position = Vector3::<f32> {
+                    x: position.x + rand::random::<f32>(),
+                    y: position.y + rand::random::<f32>(),
+                    z: position.z + rand::random::<f32>(),
+                };
+                let velocity = Vector3::<f32> {
+                    x: rand::random(),
+                    y: rand::random(),
+                    z: rand::random(),
+                };
+                boids.push(FlockingBoid::new(position, velocity));
+            }
         }
 
         Simulation {
