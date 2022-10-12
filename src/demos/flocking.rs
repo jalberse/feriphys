@@ -75,7 +75,7 @@ impl State {
             scale: 1.0,
         }];
         let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
-        let obstacles = Obstacle::from_entity(&ship_entity, 4.5);
+        let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
 
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-30.0..30.0),
