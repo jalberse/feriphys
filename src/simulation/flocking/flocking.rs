@@ -59,6 +59,7 @@ pub struct Simulation {
 
 impl Simulation {
     pub fn new(
+        num_boids: u32,
         bounding_box: BoundingBox,
         lead_boids: Option<Vec<LeadBoid>>,
         obstacles: Option<Vec<Obstacle>>,
@@ -67,7 +68,7 @@ impl Simulation {
         let config = Config::default();
 
         let mut boids = Vec::with_capacity(25);
-        for _ in 0..25 {
+        for _ in 0..num_boids {
             let position = Vector3::<f32> {
                 x: rand::random(),
                 y: rand::random(),

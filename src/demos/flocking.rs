@@ -92,7 +92,8 @@ impl State {
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let simulation = flocking::Simulation::new(bounding_box, lead_boids, Some(obstacles), None);
+        let simulation =
+            flocking::Simulation::new(30, bounding_box, lead_boids, Some(obstacles), None);
 
         let fish_model = resources::load_model(
             "blue_fish.obj",
