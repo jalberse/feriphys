@@ -54,7 +54,7 @@ pub struct Simulation {
     config: Config,
     boids: Vec<FlockingBoid>,
     lead_boids: Option<Vec<LeadBoid>>,
-    bounding_box: BoundingBox,
+    bounding_box: Option<BoundingBox>,
     obstacles: Option<Vec<Obstacle>>,
     attractors: Option<Vec<PointAttractor>>,
 }
@@ -63,7 +63,7 @@ impl Simulation {
     pub fn new(
         initial_position: Vector3<f32>,
         num_boids: u32,
-        bounding_box: BoundingBox,
+        bounding_box: Option<BoundingBox>,
         lead_boids: Option<Vec<LeadBoid>>,
         obstacles: Option<Vec<Obstacle>>,
         attractors: Option<Vec<PointAttractor>>,
@@ -106,9 +106,11 @@ impl Simulation {
                 self.get_acceleration_from_boids(boid)
                     + self.get_acceleration_from_lead_boids(boid)
                     + self.get_acceleration_from_attractors(boid)
-                    + self
-                        .bounding_box
-                        .get_repelling_acceleration(boid.position())
+                    + if let Some(bounding_box) = &self.bounding_box {
+                        bounding_box.get_repelling_acceleration(boid.position())
+                    } else {
+                        Vector3::<f32>::zero()
+                    }
                     + self.get_acceleration_from_steering(boid)
             };
 

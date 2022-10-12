@@ -75,13 +75,7 @@ impl State {
             scale: 1.0,
         }];
         let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
-        let obstacles = Obstacle::from_entity(&ship_entity, 5.0);
-
-        let bounding_box = simulation::bounding_box::BoundingBox {
-            x_range: (-30.0..30.0),
-            y_range: (0.0..30.0),
-            z_range: (-30.0..30.0),
-        };
+        let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
@@ -101,7 +95,7 @@ impl State {
         let simulation = flocking::Simulation::new(
             initial_boids_position,
             30,
-            bounding_box,
+            None,
             lead_boids,
             Some(obstacles),
             None,
