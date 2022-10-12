@@ -135,6 +135,9 @@ impl Simulation {
         // TODO use a functional approach
         let mut total_acceleration = Vector3::<f32>::zero();
         for other_boid in self.boids.iter() {
+            if other_boid == boid {
+                continue;
+            }
             total_acceleration += boid.get_acceleration(
                 other_boid,
                 self.config.avoidance_factor,
