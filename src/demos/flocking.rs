@@ -53,29 +53,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let coral_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: -6.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        }];
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
-
-        let coral_model = resources::load_model(
-            "Coral0.obj",
-            &gpu.device,
-            &gpu.queue,
-            &texture_bind_group_layout,
-        )
-        .unwrap();
-        let coral_entity = Entity::new(&gpu, coral_model, coral_instances);
-        let mut obstacles = Obstacle::from_entity(&coral_entity, 2.0);
 
         let ship_model = resources::load_model(
             "pirate_ship.obj",
@@ -97,7 +75,7 @@ impl State {
             scale: 1.0,
         }];
         let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
-        obstacles.append(&mut Obstacle::from_entity(&ship_entity, 4.0));
+        let obstacles = Obstacle::from_entity(&ship_entity, 4.5);
 
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-30.0..30.0),
@@ -107,9 +85,9 @@ impl State {
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
-                x: 6.0 * f32::cos(t / 2.0),
+                x: 6.0 * f32::cos(t / 3.0),
                 y: 1.0,
-                z: 6.0 * f32::sin(t / 2.0),
+                z: 6.0 * f32::sin(t / 3.0),
             }
         });
         let lead_boids = Some(vec![lead_boid]);
@@ -149,12 +127,7 @@ impl State {
         let seafloor_entity = Entity::new(&gpu, seafloor_tile_model, seafloor_tile_instances);
 
         let scene = Scene::new(
-            Some(vec![
-                boids_entity,
-                coral_entity,
-                seafloor_entity,
-                ship_entity,
-            ]),
+            Some(vec![boids_entity, seafloor_entity, ship_entity]),
             None,
             None,
         );

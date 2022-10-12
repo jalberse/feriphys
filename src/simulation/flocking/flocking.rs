@@ -39,7 +39,7 @@ impl Default for Config {
             avoidance_factor: 1.0,
             centering_factor: 0.1,
             velocity_matching_factor: 1.0,
-            distance_weight_threshold: 1.0,
+            distance_weight_threshold: 5.0,
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
             time_to_start_steering: Duration::from_secs(3),
