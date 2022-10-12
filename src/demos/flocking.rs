@@ -86,7 +86,7 @@ impl State {
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
                 x: 6.0 * f32::cos(t / 3.0),
-                y: 1.0,
+                y: 1.0 + f32::cos(t / 5.0),
                 z: 6.0 * f32::sin(t / 3.0),
             }
         });
