@@ -89,7 +89,32 @@ impl State {
 
         let boids_entity = Entity::new(&gpu, fish_model, instances);
 
-        let scene = Scene::new(Some(vec![boids_entity, coral_entity]), None, None);
+        let seafloor_tile_model = resources::load_model(
+            "seafloor.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
+        let seafloor_tile_instances = vec![Instance {
+            position: Vector3::<f32> {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            scale: 30.0,
+        }];
+        let seafloor_entity = Entity::new(&gpu, seafloor_tile_model, seafloor_tile_instances);
+
+        let scene = Scene::new(
+            Some(vec![boids_entity, coral_entity, seafloor_entity]),
+            None,
+            None,
+        );
 
         Self {
             gpu,
@@ -108,14 +133,14 @@ impl State {
     fn create_sim(obstacle_entity: &Entity) -> flocking::Simulation {
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-30.0..30.0),
-            y_range: (-30.0..30.0),
+            y_range: (0.0..30.0),
             z_range: (-30.0..30.0),
         };
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
                 x: 6.0 * f32::cos(t / 2.0),
-                y: 0.0,
+                y: 1.0,
                 z: 6.0 * f32::sin(t / 2.0),
             }
         });
