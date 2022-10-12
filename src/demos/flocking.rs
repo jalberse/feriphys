@@ -64,7 +64,7 @@ impl State {
         .unwrap();
         let ship_instances = vec![Instance {
             position: Vector3::<f32> {
-                x: 6.0,
+                x: -5.0,
                 y: 0.0,
                 z: 0.0,
             },
@@ -75,7 +75,7 @@ impl State {
             scale: 1.0,
         }];
         let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
-        let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
+        let obstacles = Obstacle::from_entity(&ship_entity, 5.0);
 
         let bounding_box = simulation::bounding_box::BoundingBox {
             x_range: (-30.0..30.0),
@@ -85,15 +85,27 @@ impl State {
 
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
             Vector3::<f32> {
-                x: 6.0 * f32::cos(t / 3.0),
-                y: 1.0 + f32::cos(t / 5.0),
-                z: 6.0 * f32::sin(t / 3.0),
+                x: 25.0 * f32::cos(t / 12.0),
+                y: 0.5,
+                z: 0.0,
             }
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let simulation =
-            flocking::Simulation::new(30, bounding_box, lead_boids, Some(obstacles), None);
+        let initial_boids_position = Vector3::<f32> {
+            x: 25.0,
+            y: 0.5,
+            z: 0.0,
+        };
+
+        let simulation = flocking::Simulation::new(
+            initial_boids_position,
+            30,
+            bounding_box,
+            lead_boids,
+            Some(obstacles),
+            None,
+        );
 
         let fish_model = resources::load_model(
             "blue_fish.obj",

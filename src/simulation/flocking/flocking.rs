@@ -44,7 +44,7 @@ impl Default for Config {
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
             max_sight_angle_to_lead_boid: std::f32::consts::PI,
-            time_to_start_steering: Duration::from_secs(3),
+            time_to_start_steering: Duration::from_secs(4),
             steering_overrides: false,
         }
     }
@@ -61,6 +61,7 @@ pub struct Simulation {
 
 impl Simulation {
     pub fn new(
+        initial_position: Vector3<f32>,
         num_boids: u32,
         bounding_box: BoundingBox,
         lead_boids: Option<Vec<LeadBoid>>,
@@ -72,9 +73,9 @@ impl Simulation {
         let mut boids = Vec::with_capacity(25);
         for _ in 0..num_boids {
             let position = Vector3::<f32> {
-                x: rand::random(),
-                y: rand::random(),
-                z: rand::random(),
+                x: initial_position.x + rand::random::<f32>(),
+                y: initial_position.y + rand::random::<f32>(),
+                z: initial_position.z + rand::random::<f32>(),
             };
             let velocity = Vector3::<f32> {
                 x: rand::random(),
