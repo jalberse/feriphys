@@ -38,7 +38,7 @@ impl LeadBoid {
             parametric,
             position: path(0.0),
             velocity: Vector3::<f32>::zero(),
-            weight: 3.0,
+            weight: 10.0,
         }
     }
 
@@ -143,7 +143,11 @@ impl FlockingBoid {
         velocity_matching_factor: f32,
         distance_weight_threshold: f32,
         distance_weight_threshold_falloff: f32,
+        max_sight_angle: f32,
     ) -> Vector3<f32> {
+        if self.sight_angle(other) > max_sight_angle {
+            return Vector3::<f32>::zero();
+        }
         let distance_weight = if self.distance(other) <= distance_weight_threshold {
             1.0
         } else if self.distance(other)

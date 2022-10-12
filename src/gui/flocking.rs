@@ -62,6 +62,13 @@ impl Ui for FlockingUi {
                 )
                 .text("Max Sight Angle"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.max_sight_angle_to_lead_boid,
+                    FlockingUi::MAX_SIGHT_ANGLE_MIN..=FlockingUi::MAX_SIGHT_ANGLE_MAX,
+                )
+                .text("Max Sight Angle to Lead Boid"),
+            );
             ui.add(Checkbox::new(
                 &mut self.sim_config.steering_overrides,
                 "Steering Overrides",

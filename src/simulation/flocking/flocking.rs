@@ -25,6 +25,7 @@ pub struct Config {
     /// where pi means boids can see all other boids, including those directly behind
     /// them. The forward direction is in the direction of the boid's velocity.
     pub max_sight_angle: f32,
+    pub max_sight_angle_to_lead_boid: f32,
     pub time_to_start_steering: Duration,
     /// If true, then when a boid is steering to avoid an obstacle, it will ignore
     /// other sources of acceleration. This can help prevent cases where
@@ -42,6 +43,7 @@ impl Default for Config {
             distance_weight_threshold: 5.0,
             distance_weight_threshold_falloff: 1.0,
             max_sight_angle: std::f32::consts::PI / 2.0,
+            max_sight_angle_to_lead_boid: std::f32::consts::PI,
             time_to_start_steering: Duration::from_secs(3),
             steering_overrides: false,
         }
@@ -130,15 +132,6 @@ impl Simulation {
         // TODO use a functional approach
         let mut total_acceleration = Vector3::<f32>::zero();
         for other_boid in self.boids.iter() {
-            if other_boid == boid
-                || boid.distance(other_boid)
-                    > self.config.distance_weight_threshold
-                        + self.config.distance_weight_threshold_falloff
-                || boid.sight_angle(other_boid) > self.config.max_sight_angle
-            {
-                continue;
-            }
-
             total_acceleration += boid.get_acceleration(
                 other_boid,
                 self.config.avoidance_factor,
@@ -146,6 +139,7 @@ impl Simulation {
                 self.config.velocity_matching_factor,
                 self.config.distance_weight_threshold,
                 self.config.distance_weight_threshold_falloff,
+                self.config.max_sight_angle,
             );
         }
         total_acceleration
@@ -163,6 +157,7 @@ impl Simulation {
                     self.config.velocity_matching_factor,
                     self.config.distance_weight_threshold,
                     self.config.distance_weight_threshold_falloff,
+                    self.config.max_sight_angle_to_lead_boid,
                 )
             }
         }
@@ -222,6 +217,7 @@ impl Simulation {
         self.config.distance_weight_threshold_falloff =
             ui_config_state.distance_weight_threshold_falloff;
         self.config.max_sight_angle = ui_config_state.max_sight_angle;
+        self.config.max_sight_angle_to_lead_boid = ui_config_state.max_sight_angle_to_lead_boid;
         self.config.time_to_start_steering = ui_config_state.time_to_start_steering;
         self.config.steering_overrides = ui_config_state.steering_overrides;
     }
