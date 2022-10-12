@@ -25,10 +25,16 @@ struct State {
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
+    // TODO use a vec of simulations instead of this.
     simulation: flocking::Simulation,
+    simulation_2: flocking::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
+    // TODO this is used for accumulating simulations for the second simulation.
+    //   The time accumulator should likely be associated with a simulation.
+    //   Simulation could possibly be a trait to share this kind of thing.
+    time_accumulator_2: std::time::Duration,
 }
 
 impl State {
@@ -55,63 +61,7 @@ impl State {
 
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
 
-        let ship_model = resources::load_model(
-            "pirate_ship.obj",
-            &gpu.device,
-            &gpu.queue,
-            &texture_bind_group_layout,
-        )
-        .unwrap();
-        let ship_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: -5.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        }];
-        let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
-        let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
-
-        let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 25.0 * f32::cos(t / 12.0),
-                y: 0.5,
-                z: 0.0,
-            }
-        });
-        let lead_boids = Some(vec![lead_boid]);
-
-        let initial_boids_position = Vector3::<f32> {
-            x: 25.0,
-            y: 0.5,
-            z: 0.0,
-        };
-
-        let simulation = flocking::Simulation::new(
-            initial_boids_position,
-            30,
-            None,
-            lead_boids,
-            Some(obstacles),
-            None,
-        );
-
-        let fish_model = resources::load_model(
-            "blue_fish.obj",
-            &gpu.device,
-            &gpu.queue,
-            &texture_bind_group_layout,
-        )
-        .unwrap();
-        let instances = simulation.get_boid_instances();
-
-        let boids_entity = Entity::new(&gpu, fish_model, instances);
-
+        // Set up the environment.
         let seafloor_tile_model = resources::load_model(
             "seafloor.obj",
             &gpu.device,
@@ -133,8 +83,110 @@ impl State {
         }];
         let seafloor_entity = Entity::new(&gpu, seafloor_tile_model, seafloor_tile_instances);
 
+        let ship_model = resources::load_model(
+            "pirate_ship.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
+        let ship_instances = vec![Instance {
+            position: Vector3::<f32> {
+                x: -5.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            scale: 1.0,
+        }];
+        let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
+        let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
+        let obstacles_2 = obstacles.clone();
+
+        // Set up the first simulation
+        let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
+            Vector3::<f32> {
+                x: 25.0 * f32::cos(t / 12.0),
+                y: 0.5,
+                z: 0.0,
+            }
+        });
+        let lead_boids = Some(vec![lead_boid]);
+
+        let initial_boids_position = Vector3::<f32> {
+            x: 25.0,
+            y: 0.5,
+            z: 0.0,
+        };
+
+        let num_boids = if cfg!(debug_assertions) { 30 } else { 100 };
+
+        let simulation = flocking::Simulation::new(
+            initial_boids_position,
+            num_boids,
+            None,
+            lead_boids,
+            Some(obstacles),
+            None,
+        );
+
+        // Add the first simulation info to the scene
+        let fish_model = resources::load_model(
+            "blue_fish.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
+        let instances = simulation.get_boid_instances();
+
+        let boids_entity = Entity::new(&gpu, fish_model, instances);
+
+        // Set up the second simulation that we'll display alongside the first
+        let initial_boids_position = Vector3::<f32> {
+            x: 15.0,
+            y: 10.0,
+            z: 0.0,
+        };
+        let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
+            Vector3::<f32> {
+                x: 15.0 * f32::cos(t / 12.0),
+                y: 5.0 + 5.0 * f32::cos(t / 12.0),
+                z: 15.0 * f32::sin(t / 12.0),
+            }
+        });
+        let lead_boids = Some(vec![lead_boid]);
+        let simulation_2 = flocking::Simulation::new(
+            initial_boids_position,
+            num_boids,
+            None,
+            lead_boids,
+            Some(obstacles_2),
+            None,
+        );
+
+        // Add the second simulation info to the scene
+        let fish_model_2 = resources::load_model(
+            "yellow_fish.obj",
+            &gpu.device,
+            &gpu.queue,
+            &texture_bind_group_layout,
+        )
+        .unwrap();
+        let instances = simulation_2.get_boid_instances();
+
+        let boids_entity_2 = Entity::new(&gpu, fish_model_2, instances);
+
         let scene = Scene::new(
-            Some(vec![boids_entity, seafloor_entity, ship_entity]),
+            Some(vec![
+                boids_entity,
+                boids_entity_2,
+                seafloor_entity,
+                ship_entity,
+            ]),
             None,
             None,
         );
@@ -147,9 +199,11 @@ impl State {
             camera_bundle,
             light_bind_group,
             simulation,
+            simulation_2,
             scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
+            time_accumulator_2: std::time::Duration::from_millis(0),
         }
     }
 
@@ -194,6 +248,7 @@ impl State {
 
     fn update(&mut self, frame_time: std::time::Duration) {
         self.time_accumulator = self.time_accumulator + frame_time;
+        self.time_accumulator_2 = self.time_accumulator_2 + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
         while self.time_accumulator >= self.simulation.get_timestep() {
@@ -201,9 +256,18 @@ impl State {
             self.time_accumulator = self.time_accumulator - elapsed_sim_time;
         }
 
+        while self.time_accumulator_2 >= self.simulation_2.get_timestep() {
+            let elapsed_sim_time = self.simulation_2.step();
+            self.time_accumulator_2 = self.time_accumulator_2 - elapsed_sim_time;
+        }
+
         let new_instances = self.simulation.get_boid_instances();
         self.scene
             .update_entity_instances(&self.gpu, 0, new_instances);
+
+        let new_instances = self.simulation_2.get_boid_instances();
+        self.scene
+            .update_entity_instances(&self.gpu, 1, new_instances);
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -290,6 +354,7 @@ pub fn run() {
                 current_time = new_time;
                 state.update(frame_time);
                 state.simulation.sync_sim_config_from_ui(&mut flocking_ui);
+                state.simulation_2.sync_sim_config_from_ui(&mut flocking_ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
                 let gui_render_command_buffer = gui.render(

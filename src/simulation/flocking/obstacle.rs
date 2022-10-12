@@ -7,6 +7,7 @@ use crate::graphics::entity::Entity;
 use super::boid::{Boid, FlockingBoid};
 
 /// An obstacle which FlockingBoids may avoid by steering, handled as a bounding sphere for some mesh.
+#[derive(Clone)]
 pub struct Obstacle {
     pub position: Vector3<f32>,
     pub radius: f32,

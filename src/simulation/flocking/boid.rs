@@ -38,7 +38,7 @@ impl LeadBoid {
             parametric,
             position: path(0.0),
             velocity: Vector3::<f32>::zero(),
-            weight: 10.0,
+            weight: 3.0,
         }
     }
 

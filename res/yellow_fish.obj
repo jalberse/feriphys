@@ -1,6 +1,6 @@
 # Blender 3.3.1
 # www.blender.org
-mtllib blue_fish.mtl
+mtllib yellow_fish.mtl
 o g_fish_Low
 v 0.114119 -0.108068 0.898885
 v 0.043185 -0.106353 0.961883
