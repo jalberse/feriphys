@@ -1,10 +1,6 @@
 use crate::{
-    graphics::entity::Entity,
-    graphics::forms,
-    graphics::gpu_interface::GPUInterface,
-    graphics::instance::Instance,
-    graphics::model::ColoredMesh,
-    gui,
+    graphics::entity::ColoredMeshEntity, graphics::forms, graphics::gpu_interface::GPUInterface,
+    graphics::instance::Instance, graphics::model::ColoredMesh, gui,
 };
 
 use super::generator;
@@ -167,7 +163,6 @@ impl Simulation {
             let acceleration_wind =
                 particle.drag * self.config.wind * self.config.wind.magnitude() / particle.mass;
 
-            // TODO: Calculate acceleration due to some vortex force.
             let center_line_unit_vec = Vector3::<f32>::unit_y();
             let displacement_on_center_line = (particle.position - Vector3::<f32>::zero())
                 .dot(center_line_unit_vec)
@@ -222,14 +217,16 @@ impl Simulation {
                         velocity_collision.dot(tri.normal()) * tri.normal();
                     let velocity_collision_tangent = velocity_collision - velocity_collision_normal;
 
-                    let velocity_response_normal = -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
+                    let velocity_response_normal =
+                        -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
                     let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
                         velocity_collision_tangent
                     } else {
                         velocity_collision_tangent
                             - velocity_collision_tangent.normalize()
                                 * f32::min(
-                                    self.config.coefficient_of_friction * velocity_collision_normal.magnitude(),
+                                    self.config.coefficient_of_friction
+                                        * velocity_collision_normal.magnitude(),
                                     velocity_collision_tangent.magnitude(),
                                 )
                     };
@@ -252,7 +249,7 @@ impl Simulation {
         std::time::Duration::from_secs_f32(self.config.dt)
     }
 
-    pub fn get_particles_entity(&self, gpu: &GPUInterface) -> Entity {
+    pub fn get_particles_entity(&self, gpu: &GPUInterface) -> ColoredMeshEntity {
         let mesh = forms::get_quad(&gpu.device, [1.0, 1.0, 1.0]);
 
         let mut instances = Vec::<Instance>::new();
@@ -272,7 +269,7 @@ impl Simulation {
             instances.push(instance);
         }
 
-        Entity::new(&gpu, mesh, instances)
+        ColoredMeshEntity::new(&gpu, mesh, instances)
     }
 
     pub fn get_particles_instances(&self) -> Vec<Instance> {
@@ -298,7 +295,7 @@ impl Simulation {
         std::time::Duration::from_secs_f32(self.config.dt)
     }
 
-    pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles_gui::ParticlesUi) {
+    pub fn sync_sim_config_from_ui(&mut self, ui: &mut gui::particles::ParticlesUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.dt = ui_config_state.dt;
         self.config.particles_generated_per_step = ui_config_state.particles_generated_per_step;

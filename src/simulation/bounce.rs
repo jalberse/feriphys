@@ -1,5 +1,5 @@
 /// The bounce module contains the logic for a bouncing ball simulation.
-use crate::gui::bounce_gui;
+use crate::gui::bounce;
 
 use cgmath::{InnerSpace, Vector3, Zero};
 
@@ -316,7 +316,7 @@ impl State {
         any_wall_friction_overcomes_acceleration
     }
 
-    pub fn sync_state_from_ui(&mut self, ui: &mut bounce_gui::BouncingBallUi) {
+    pub fn sync_state_from_ui(&mut self, ui: &mut bounce::BouncingBallUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.dt = ui_config_state.dt;
         self.config.acceleration_gravity = ui_config_state.acceleration_gravity;

@@ -79,14 +79,18 @@ impl Ui for ParticlesUi {
             ui.add(
                 Slider::new(
                     &mut self.sim_config.coefficient_of_restitution,
-                    ParticlesUi::MIN_COEFFICIENT_OF_RESTITUTION..=ParticlesUi::MAX_COEFFICIENT_OF_RESTITUTION,
-                ).text("Coefficient of Restitution"),
+                    ParticlesUi::MIN_COEFFICIENT_OF_RESTITUTION
+                        ..=ParticlesUi::MAX_COEFFICIENT_OF_RESTITUTION,
+                )
+                .text("Coefficient of Restitution"),
             );
             ui.add(
                 Slider::new(
                     &mut self.sim_config.coefficient_of_friction,
-                    ParticlesUi::MIN_COEFFICIENT_OF_FRICTION..=ParticlesUi::MAX_COEFFICIENT_OF_FRICTION,
-                ).text("Coefficient of Friction"),
+                    ParticlesUi::MIN_COEFFICIENT_OF_FRICTION
+                        ..=ParticlesUi::MAX_COEFFICIENT_OF_FRICTION,
+                )
+                .text("Coefficient of Friction"),
             );
             ui.add(
                 Slider::new(

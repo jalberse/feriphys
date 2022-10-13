@@ -1,17 +1,14 @@
 use wgpu::{BindGroupLayout, RenderPipeline};
 
 use crate::{
-    graphics::model::{
-        ColoredVertex,
-        Vertex
-    },
-    graphics::instance,
-    graphics::texture,
     graphics::camera::CameraBundle,
-    graphics::gpu_interface::GPUInterface
+    graphics::gpu_interface::GPUInterface,
+    graphics::instance,
+    graphics::model::{ColoredVertex, Vertex},
+    graphics::texture,
 };
 
-use super::camera::Projection;
+use super::{camera::Projection, model::ModelVertex};
 
 pub fn create_render_pipeline(
     device: &wgpu::Device,
@@ -96,6 +93,37 @@ pub fn create_colored_mesh_render_pipeline(
         gpu.config.format,
         Some(texture::Texture::DEPTH_FORMAT),
         &[ColoredVertex::desc(), instance::InstanceRaw::desc::<5>()],
+        shader,
+    )
+}
+
+pub fn create_model_render_pipeline(
+    gpu: &GPUInterface,
+    camera_bundle: &CameraBundle,
+    light_bind_group_layout: &BindGroupLayout,
+) -> RenderPipeline {
+    let texture_bind_group_layout = create_texture_bind_group_layout(gpu);
+    let layout = gpu
+        .device
+        .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Textured Model Pipeline Layout"),
+            bind_group_layouts: &[
+                &texture_bind_group_layout,
+                &camera_bundle.camera_bind_group_layout,
+                &light_bind_group_layout,
+            ],
+            push_constant_ranges: &[],
+        });
+    let shader = wgpu::ShaderModuleDescriptor {
+        label: Some("Default Model Shader"),
+        source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/shader.wgsl").into()),
+    };
+    create_render_pipeline(
+        &gpu.device,
+        &layout,
+        gpu.config.format,
+        Some(texture::Texture::DEPTH_FORMAT),
+        &[ModelVertex::desc(), instance::InstanceRaw::desc::<5>()],
         shader,
     )
 }

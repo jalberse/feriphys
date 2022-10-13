@@ -229,7 +229,7 @@ pub struct CameraBundle {
 
 impl CameraBundle {
     pub fn new(gpu: &GPUInterface) -> CameraBundle {
-        let camera = Camera::new((0.0, 0.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+        let camera = Camera::new((0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let projection = Projection::new(
             gpu.config.width,
             gpu.config.height,

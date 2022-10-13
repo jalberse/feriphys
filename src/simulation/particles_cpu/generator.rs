@@ -20,12 +20,11 @@ pub fn generate_particles(
     drag: Range<f32>,
 ) {
     let mut rng = rand::thread_rng();
-    let non_parallel_vec =
-        if cgmath::relative_eq!(normal.normalize(), Vector3::<f32>::unit_z()) {
-            Vector3::<f32>::unit_x()
-        } else {
-            Vector3::<f32>::unit_z()
-        };
+    let non_parallel_vec = if cgmath::relative_eq!(normal.normalize(), Vector3::<f32>::unit_z()) {
+        Vector3::<f32>::unit_x()
+    } else {
+        Vector3::<f32>::unit_z()
+    };
     let vec_in_plane = normal.cross(non_parallel_vec).normalize();
     for _ in 0..num_particles {
         let angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
