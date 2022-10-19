@@ -44,8 +44,6 @@ impl State {
             &light_bind_group_layout,
         );
 
-        // TODO we actually want to start with a plane, since we'll drop a cube onto it. So get the scene rendering with
-        //  just that, yea.
         let quad = forms::get_quad(&gpu.device, [0.9, 0.1, 0.1]);
         let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
