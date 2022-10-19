@@ -253,7 +253,7 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         3, 2, 6, 6, 7, 3, // top
     ];
 
-    // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
+    // Cubes with averaged vertex normals look bad without holding edges. So we'll use non-averaged
     // vertexes. That means generating the duplicate ones, and using 0..n as indices.
     let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
         .iter()
