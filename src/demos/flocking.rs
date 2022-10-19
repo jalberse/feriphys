@@ -40,7 +40,8 @@ struct State {
 impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
-        let camera_bundle = CameraBundle::new(&gpu);
+        let camera_bundle =
+            CameraBundle::new(&gpu, (0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let depth_texture =
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth texture");
 

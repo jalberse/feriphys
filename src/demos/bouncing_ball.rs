@@ -57,7 +57,8 @@ impl State {
 
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
 
-        let camera_bundle = CameraBundle::new(&gpu);
+        let camera_bundle =
+            CameraBundle::new(&gpu, (0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
 
         let light_uniform = light::LightUniform::new([6.0, 2.0, 6.0], [1.0, 1.0, 1.0]);
         let (light_bind_group_layout, light_bind_group) =
