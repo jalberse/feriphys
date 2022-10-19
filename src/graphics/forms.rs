@@ -1,33 +1,8 @@
 /// The forms module provides basic forms (planes, spheres, cubes...) for rendering.
-use super::model;
+use super::{model, util::get_normals};
 
-use cgmath::{prelude::*, Vector3};
-use itertools::Itertools;
+use cgmath::Vector3;
 use wgpu::util::DeviceExt;
-
-fn get_normals(
-    vertex_positions: &Vec<cgmath::Vector3<f32>>,
-    indices: &Vec<u16>,
-) -> Vec<cgmath::Vector3<f32>> {
-    // Calculate the normals of each vertex by averaging the normals of all adjacent faces.
-    let mut normals = Vec::new();
-    for _ in 0..vertex_positions.len() {
-        normals.push(cgmath::Vector3::new(0.0, 0.0, 0.0));
-    }
-    for (a, b, c) in indices.iter().tuples() {
-        let edge1 = vertex_positions[*a as usize] - vertex_positions[*b as usize];
-        let edge2 = vertex_positions[*a as usize] - vertex_positions[*c as usize];
-        let face_normal = edge1.cross(edge2);
-        // Add this face's normal to each vertex's normal.
-        normals[*a as usize] += face_normal;
-        normals[*b as usize] += face_normal;
-        normals[*c as usize] += face_normal;
-    }
-    normals
-        .iter()
-        .map(|n| n.normalize())
-        .collect::<Vec<cgmath::Vector3<f32>>>()
-}
 
 /// Zips the vertex positions with their normals, and adds the color,
 /// to get the ColoredVertex. Normals can be gotten from vertex positions
