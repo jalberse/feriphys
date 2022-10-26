@@ -28,7 +28,7 @@ pub trait Stateful {
 ///
 /// See "Foundations of Physically Based Modeling and Animation" by John C. Keyser
 /// and Donald H. House, 6.2 "Expanding the Concept of State" (page 87).
-struct State<T: Stateful> {
+pub struct State<T: Stateful> {
     elements: Vec<T>,
 }
 

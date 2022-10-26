@@ -138,53 +138,52 @@ pub fn generate_sphere(
     )
 }
 
-#[allow(dead_code)]
-pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
+pub fn get_cube_vertices() -> (Vec<Vector3<f32>>, Vec<usize>) {
     let vertex_positions = vec![
         // front
         cgmath::Vector3 {
-            x: -1.0,
-            y: -1.0,
-            z: 1.0,
+            x: -0.5,
+            y: -0.5,
+            z: 0.5,
         },
         cgmath::Vector3 {
-            x: 1.0,
-            y: -1.0,
-            z: 1.0,
+            x: 0.5,
+            y: -0.5,
+            z: 0.5,
         },
         cgmath::Vector3 {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
+            x: 0.5,
+            y: 0.5,
+            z: 0.5,
         },
         cgmath::Vector3 {
-            x: -1.0,
-            y: 1.0,
-            z: 1.0,
+            x: -0.5,
+            y: 0.5,
+            z: 0.5,
         },
         cgmath::Vector3 {
-            x: -1.0,
-            y: -1.0,
-            z: -1.0,
+            x: -0.5,
+            y: -0.5,
+            z: -0.5,
         },
         cgmath::Vector3 {
-            x: 1.0,
-            y: -1.0,
-            z: -1.0,
+            x: 0.5,
+            y: -0.5,
+            z: -0.5,
         },
         cgmath::Vector3 {
-            x: 1.0,
-            y: 1.0,
-            z: -1.0,
+            x: 0.5,
+            y: 0.5,
+            z: -0.5,
         },
         cgmath::Vector3 {
-            x: -1.0,
-            y: 1.0,
-            z: -1.0,
+            x: -0.5,
+            y: 0.5,
+            z: -0.5,
         },
     ];
 
-    let indices: Vec<u16> = vec![
+    let indices: Vec<usize> = vec![
         0, 1, 2, 2, 3, 0, // front
         1, 5, 6, 6, 2, 1, // right
         7, 6, 5, 5, 4, 7, // back
@@ -193,11 +192,18 @@ pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
         3, 2, 6, 6, 7, 3, // top
     ];
 
+    (vertex_positions, indices)
+}
+
+#[allow(dead_code)]
+pub fn get_cube(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
+    let (vertex_positions, indices) = get_cube_vertices();
+
     // Cubes with averaged vertex normals look bad without holding edges. So we'll use non-averaged
     // vertexes. That means generating the duplicate ones, and using 0..n as indices.
     let vertex_positions: Vec<cgmath::Vector3<f32>> = indices
         .iter()
-        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i as usize] })
+        .map(|i| -> cgmath::Vector3<f32> { vertex_positions[*i] })
         .collect();
     let vertex_indices = Vec::from_iter(0..vertex_positions.len() as u16);
 

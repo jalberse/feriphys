@@ -1,7 +1,11 @@
-use crate::graphics::texture;
+use crate::{
+    graphics::texture, simulation::springy::obstacle,
+    simulation::springy::springy_mesh::SpringyMesh,
+};
 
 use cgmath::Vector3;
 use core::ops::Range;
+use itertools::Itertools;
 use wgpu::util::DeviceExt;
 
 use super::util::get_normals;
@@ -51,6 +55,49 @@ impl ColoredMesh {
         vertex_indices: Vec<u16>,
         color: [f32; 3],
     ) -> ColoredMesh {
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    pub fn from_springy_mesh(
+        device: &wgpu::Device,
+        name: String,
+        springy_mesh: &SpringyMesh,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        let (vertex_positions, vertex_indices) = springy_mesh.get_vertices();
+        let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    pub fn from_obstacle(
+        device: &wgpu::Device,
+        name: String,
+        springy_mesh: &obstacle::Obstacle,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        // TODO get_vertices() can be made into a Trait so this fn can be generalized with from_springy_mesh
+        let (vertex_positions, vertex_indices) = springy_mesh.get_vertices();
+        let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
         let (vertex_buffer, index_buffer) =
             Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
         let num_elements = vertex_indices.len() as u32;

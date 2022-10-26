@@ -32,7 +32,7 @@ struct Face {
     v2: Vector3<f32>,
 }
 
-struct Obstacle {
+pub struct Obstacle {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
@@ -87,6 +87,19 @@ impl Obstacle {
             edges,
             faces,
         }
+    }
+
+    // TODO This doesn't efficiently use indices, we repeat each vertex. We should properly use indexing,
+    //  which will require more bookkeeping in Obstacle.
+    pub fn get_vertices(&self) -> (Vec<Vector3<f32>>, Vec<usize>) {
+        let vertex_positions = self.faces.iter().fold(Vec::new(), |mut array, f| {
+            array.push(f.v0);
+            array.push(f.v1);
+            array.push(f.v2);
+            array
+        });
+        let vertex_indices = 0..self.faces.len() * 3;
+        (vertex_positions, vertex_indices.collect_vec())
     }
 }
 
