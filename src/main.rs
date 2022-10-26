@@ -3,6 +3,7 @@ mod demos;
 mod graphics;
 mod gui;
 mod simulation;
+mod utils;
 
 use args::{Demos, FeriphysArgs};
 use clap::Parser;
