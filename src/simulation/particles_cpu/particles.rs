@@ -58,16 +58,8 @@ impl Default for Config {
             particles_mass_range: 0.0,
             particles_drag_mean: 0.5,
             particles_drag_range: 0.0,
-            acceleration_gravity: Vector3::<f32> {
-                x: 0.0,
-                y: -10.0,
-                z: 0.0,
-            },
-            wind: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            acceleration_gravity: Vector3::<f32>::new(0.0, -10.0, 0.0),
+            wind: Vector3::<f32>::zero(),
             coefficient_of_restitution: 0.95,
             coefficient_of_friction: 0.3,
             y_axis_attractor_gravity: 0.0,

@@ -126,16 +126,8 @@ mod tests {
             if state_data.len() != Self::num_state_elements() {
                 panic!("State Vector incorrect size!")
             }
-            let position = Vector3::<f32> {
-                x: state_data[0],
-                y: state_data[1],
-                z: state_data[2],
-            };
-            let velocity = Vector3::<f32> {
-                x: state_data[3],
-                y: state_data[4],
-                z: state_data[5],
-            };
+            let position = Vector3::<f32>::new(state_data[0], state_data[1], state_data[2]);
+            let velocity = Vector3::<f32>::new(state_data[3], state_data[4], state_data[5]);
             Point { position, velocity }
         }
 
@@ -170,16 +162,8 @@ mod tests {
     fn euler_step() {
         let h = 0.5; // Timestep
         let points = vec![Point {
-            position: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            velocity: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 1.0,
-            },
+            position: Vector3::<f32>::new(0.0, 0.0, 0.0),
+            velocity: Vector3::<f32>::new(0.0, 0.0, 1.0),
         }];
         let state = super::State::new(points);
         let expected_initial_state = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
@@ -189,16 +173,8 @@ mod tests {
         let new_points = next_state.get_elements();
         let new_point = &new_points[0];
 
-        let expected_position = Vector3::<f32> {
-            x: 0.0,
-            y: 0.0,
-            z: 0.5,
-        };
-        let expected_velocity = Vector3::<f32> {
-            x: 0.5,
-            y: -0.5,
-            z: 1.0,
-        };
+        let expected_position = Vector3::<f32>::new(0.0, 0.0, 0.5);
+        let expected_velocity = Vector3::<f32>::new(0.5, -0.5, 1.0);
         assert_eq!(expected_position, new_point.position);
         assert_eq!(expected_velocity, new_point.velocity);
     }

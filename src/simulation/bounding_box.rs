@@ -18,10 +18,10 @@ impl BoundingBox {
         let force_z_front = -1.0 / (self.z_range.end - position.z).powi(2);
         let force_z_back = 1.0 / (self.z_range.start - position.z).powi(2);
 
-        Vector3::<f32> {
-            x: force_x_top + force_x_bottom,
-            y: force_y_right + force_y_left,
-            z: force_z_back + force_z_front,
-        }
+        Vector3::<f32>::new(
+            force_x_top + force_x_bottom,
+            force_y_right + force_y_left,
+            force_z_back + force_z_front,
+        )
     }
 }

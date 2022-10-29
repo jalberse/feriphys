@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use cgmath::{Rotation3, Vector3};
+use cgmath::{Rotation3, Vector3, Zero};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -71,11 +71,7 @@ impl State {
         )
         .unwrap();
         let seafloor_tile_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            position: Vector3::<f32>::zero(),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
@@ -92,11 +88,7 @@ impl State {
         )
         .unwrap();
         let ship_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: -5.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            position: Vector3::<f32>::new(-5.0, 0.0, 0.0),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
@@ -109,19 +101,11 @@ impl State {
 
         // Set up the first simulation
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 25.0 * f32::cos(t / 12.0),
-                y: 0.5,
-                z: 0.0,
-            }
+            Vector3::<f32>::new(25.0 * f32::cos(t / 12.0), 0.5, 0.0)
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let initial_boids_position = Vector3::<f32> {
-            x: 25.0,
-            y: 0.5,
-            z: 0.0,
-        };
+        let initial_boids_position = Vector3::<f32>::new(25.0, 0.5, 0.0);
 
         let num_boids = if cfg!(debug_assertions) { 30 } else { 110 };
 
@@ -147,29 +131,17 @@ impl State {
         let boids_entity = Entity::new(&gpu, fish_model, instances);
 
         // Set up the second simulation that we'll display alongside the first
-        let initial_boids_position_2_0 = Vector3::<f32> {
-            x: 15.0,
-            y: 10.0,
-            z: 0.0,
-        };
-        let initial_boids_position_2_1 = Vector3::<f32> {
-            x: 25.0,
-            y: 0.5,
-            z: 0.0,
-        };
+        let initial_boids_position_2_0 = Vector3::<f32>::new(15.0, 10.0, 0.0);
+        let initial_boids_position_2_1 = Vector3::<f32>::new(25.0, 0.5, 0.0);
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 15.0 * f32::cos(t / 12.0),
-                y: 6.0 + 5.0 * f32::cos(t / 12.0),
-                z: 15.0 * f32::sin(t / 12.0),
-            }
+            Vector3::<f32>::new(
+                15.0 * f32::cos(t / 12.0),
+                6.0 + 5.0 * f32::cos(t / 12.0),
+                15.0 * f32::sin(t / 12.0),
+            )
         });
         let lead_boid_2 = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 25.0 * f32::cos(t / 10.0),
-                y: 1.0,
-                z: 10.0 * f32::sin(t / 9.0),
-            }
+            Vector3::<f32>::new(25.0 * f32::cos(t / 10.0), 1.0, 10.0 * f32::sin(t / 9.0))
         });
         let lead_boids = Some(vec![lead_boid, lead_boid_2]);
         let simulation_2 = flocking::Simulation::new(

@@ -102,77 +102,30 @@ impl Obstacle {
                 let collision_point = old_position + dt * fraction_timestep * old_velocity;
 
                 // Flatten the tri and the point into 2D to check containment.
-                let (v1_flat, v2_flat, v3_flat, point_flat) =
-                    if tri.normal().x >= tri.normal().y && tri.normal().x >= tri.normal().z {
-                        // Eliminate the x component of all the elements
-                        let v1_flat = Vector3::<f32> {
-                            x: 0.0,
-                            y: tri.v1.y,
-                            z: tri.v1.z,
-                        };
-                        let v2_flat = Vector3::<f32> {
-                            x: 0.0,
-                            y: tri.v2.y,
-                            z: tri.v2.z,
-                        };
-                        let v3_flat = Vector3::<f32> {
-                            x: 0.0,
-                            y: tri.v3.y,
-                            z: tri.v3.z,
-                        };
-                        let point_flat = Vector3::<f32> {
-                            x: 0.0,
-                            y: collision_point.y,
-                            z: collision_point.z,
-                        };
-                        (v1_flat, v2_flat, v3_flat, point_flat)
-                    } else if tri.normal().y >= tri.normal().x && tri.normal().y >= tri.normal().z {
-                        // Eliminate the y component of all the elements
-                        let v1_flat = Vector3::<f32> {
-                            x: tri.v1.x,
-                            y: 0.0,
-                            z: tri.v1.z,
-                        };
-                        let v2_flat = Vector3::<f32> {
-                            x: tri.v2.x,
-                            y: 0.0,
-                            z: tri.v2.z,
-                        };
-                        let v3_flat = Vector3::<f32> {
-                            x: tri.v3.x,
-                            y: 0.0,
-                            z: tri.v3.z,
-                        };
-                        let point_flat = Vector3::<f32> {
-                            x: collision_point.x,
-                            y: 0.0,
-                            z: collision_point.z,
-                        };
-                        (v1_flat, v2_flat, v3_flat, point_flat)
-                    } else {
-                        // Eliminate the z component of all the elements
-                        let v1_flat = Vector3::<f32> {
-                            x: tri.v1.x,
-                            y: tri.v1.y,
-                            z: 0.0,
-                        };
-                        let v2_flat = Vector3::<f32> {
-                            x: tri.v2.x,
-                            y: tri.v2.y,
-                            z: 0.0,
-                        };
-                        let v3_flat = Vector3::<f32> {
-                            x: tri.v3.x,
-                            y: tri.v3.y,
-                            z: 0.0,
-                        };
-                        let point_flat = Vector3::<f32> {
-                            x: collision_point.x,
-                            y: collision_point.y,
-                            z: 0.0,
-                        };
-                        (v1_flat, v2_flat, v3_flat, point_flat)
-                    };
+                let (v1_flat, v2_flat, v3_flat, point_flat) = if tri.normal().x >= tri.normal().y
+                    && tri.normal().x >= tri.normal().z
+                {
+                    // Eliminate the x component of all the elements
+                    let v1_flat = Vector3::<f32>::new(0.0, tri.v1.y, tri.v1.z);
+                    let v2_flat = Vector3::<f32>::new(0.0, tri.v2.y, tri.v2.z);
+                    let v3_flat = Vector3::<f32>::new(0.0, tri.v3.y, tri.v3.z);
+                    let point_flat = Vector3::<f32>::new(0.0, collision_point.y, collision_point.z);
+                    (v1_flat, v2_flat, v3_flat, point_flat)
+                } else if tri.normal().y >= tri.normal().x && tri.normal().y >= tri.normal().z {
+                    // Eliminate the y component of all the elements
+                    let v1_flat = Vector3::<f32>::new(tri.v1.x, 0.0, tri.v1.z);
+                    let v2_flat = Vector3::<f32>::new(tri.v2.x, 0.0, tri.v2.z);
+                    let v3_flat = Vector3::<f32>::new(tri.v3.x, 0.0, tri.v3.z);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, 0.0, collision_point.z);
+                    (v1_flat, v2_flat, v3_flat, point_flat)
+                } else {
+                    // Eliminate the z component of all the elements
+                    let v1_flat = Vector3::<f32>::new(tri.v1.x, tri.v1.y, 0.0);
+                    let v2_flat = Vector3::<f32>::new(tri.v2.x, tri.v2.y, 0.0);
+                    let v3_flat = Vector3::<f32>::new(tri.v3.x, tri.v3.y, 0.0);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, collision_point.y, 0.0);
+                    (v1_flat, v2_flat, v3_flat, point_flat)
+                };
 
                 // Then check the point by comparing the orientation of the cross products
                 let cross1 = (v2_flat - v1_flat).cross(point_flat - v1_flat);
