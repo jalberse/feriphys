@@ -55,15 +55,14 @@ impl State {
 
         let simulation_state = simulation::particles_cpu::particles::Simulation::new(&obstacle);
 
-        let mut instances = Vec::<Instance>::new();
-        instances.push(Instance {
+        let instances = vec![Instance {
             position: Vector3::<f32>::zero(),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
             scale: 1.0,
-        });
+        }];
         let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances);
 
         let particles_entity = simulation_state.get_particles_entity(&gpu);
