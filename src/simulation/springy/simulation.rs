@@ -58,6 +58,9 @@ impl Simulation {
 
     // TODO consider extending this to allow for updating the springy mesh properties, i.e. changing nominal spring constant and damping, and the total mass of
     //      the springy mesh.
+    //      Would need to be careful with updating strut values, since
+    //      they aren't uniform (add_strut allows us to have varying values,
+    //      which is important for cloth simulation)
     pub fn sync_sim_config_from_ui(
         &mut self,
         ui: &mut gui::spring_mass_damper::SpringMassDamperUi,

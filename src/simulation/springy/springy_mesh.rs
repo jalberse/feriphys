@@ -356,6 +356,18 @@ impl SpringyMesh {
         }
     }
 
+    pub fn add_strut(&mut self, vertex_indices: (usize, usize), stiffness: f32, damping: f32) {
+        self.struts.push(Strut::new(
+            stiffness,
+            damping,
+            (self.points[vertex_indices.0].position - self.points[vertex_indices.1].position)
+                .magnitude(),
+            vertex_indices,
+            (None, None),
+            None,
+        ));
+    }
+
     pub fn get_points(&self) -> &Vec<Point> {
         &self.points
     }

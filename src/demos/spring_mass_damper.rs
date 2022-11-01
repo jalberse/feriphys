@@ -278,7 +278,7 @@ pub fn run() {
 
 fn get_springy_cube() -> springy_mesh::SpringyMesh {
     let (vertex_positions, indices) = forms::get_cube_vertices();
-    SpringyMesh::new(
+    let mut cube = SpringyMesh::new(
         vertex_positions,
         indices,
         8.0 * 10.0,
@@ -286,7 +286,38 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
         springy_mesh::STRUT_DAMPING_DEFAULT,
         springy_mesh::TORSIONAL_SPRING_STIFFNESS_DEFAULT,
         springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
-    )
+    );
+    cube.add_strut(
+        (0, 2),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube.add_strut(
+        (1, 6),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube.add_strut(
+        (5, 7),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube.add_strut(
+        (3, 4),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube.add_strut(
+        (1, 4),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube.add_strut(
+        (3, 6),
+        springy_mesh::STRUT_STIFFNESS_DEFAULT,
+        springy_mesh::STRUT_DAMPING_DEFAULT,
+    );
+    cube
 }
 
 fn get_springy_tri() -> springy_mesh::SpringyMesh {
