@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::simulation::{springy::obstacle, state::Stateful};
+use crate::simulation::{consts, springy::obstacle, state::Stateful};
 
 use super::config::Config;
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
@@ -404,7 +404,7 @@ impl SpringyMesh {
                 let velocity_collision = old_point.velocity
                     + config.dt * fraction_timestep * old_point.accumulated_force / old_point.mass;
 
-                let new_position = collision_point + face.normal() * f32::EPSILON;
+                let new_position = collision_point + face.normal() * consts::EPSILON;
 
                 let velocity_collision_normal =
                     velocity_collision.dot(face.normal()) * face.normal();
