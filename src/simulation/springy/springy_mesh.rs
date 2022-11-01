@@ -1,4 +1,6 @@
-use crate::simulation::state::Stateful;
+use std::time::Duration;
+
+use crate::simulation::{springy::obstacle, state::Stateful};
 
 use super::config::Config;
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
@@ -358,9 +360,145 @@ impl SpringyMesh {
         &self.points
     }
 
-    // TODO I think our collision handling can be in this function
-    pub fn update_points(&mut self, new_points: Vec<Point>) {
+    pub fn update_points(
+        &mut self,
+        mut new_points: Vec<Point>,
+        obstacles: &Vec<obstacle::Obstacle>,
+        config: &Config,
+    ) {
+        let obstacle_faces = obstacles
+            .iter()
+            .map(|o| o.get_faces())
+            .flatten()
+            .collect_vec();
+        let obstacle_edges = obstacles
+            .iter()
+            .map(|o| o.get_edges())
+            .flatten()
+            .collect_vec();
+        let obstacle_vertices = obstacles
+            .iter()
+            .map(|o| o.get_vertices())
+            .flatten()
+            .collect_vec();
+
+        // TODO collision detection can be more efficient with bounding box checks.
+
+        // Vertex-Face collisions
+        for (new_point, old_point) in new_points.iter_mut().zip(&self.points) {
+            let collided_face_maybe =
+                self.get_collided_face(old_point, new_point, &obstacle_faces, config.dt);
+            if let Some(face) = collided_face_maybe {
+                let old_distance_to_plane = face.distance_from_plane(&old_point.position);
+                let new_distance_to_plane = face.distance_from_plane(&new_point.position);
+
+                let fraction_timestep =
+                    old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
+
+                let collision_point = old_point.position
+                    + config.dt.as_secs_f32() * fraction_timestep * old_point.velocity;
+                let velocity_collision = old_point.velocity
+                    + config.dt.as_secs_f32() * fraction_timestep * old_point.accumulated_force
+                        / old_point.mass;
+
+                let new_position = collision_point + face.normal() * f32::EPSILON;
+
+                let velocity_collision_normal =
+                    velocity_collision.dot(face.normal()) * face.normal();
+                let velocity_collision_tangent = velocity_collision - velocity_collision_normal;
+
+                let velocity_response_normal =
+                    -1.0 * velocity_collision_normal * config.coefficient_of_restitution;
+                let velocity_response_tangent = if velocity_collision_tangent.is_zero() {
+                    velocity_collision_tangent
+                } else {
+                    velocity_collision_tangent
+                        - velocity_collision_tangent.normalize()
+                            * f32::min(
+                                config.coefficient_of_friction
+                                    * velocity_collision_normal.magnitude(),
+                                velocity_collision_tangent.magnitude(),
+                            )
+                };
+
+                let velocity_response = velocity_response_normal + velocity_response_tangent;
+
+                new_point.position = new_position;
+                new_point.velocity = velocity_response;
+            }
+        }
+
+        // TODO then, handle face-vertex collisions (obstacles' vertices against the mesh's faces)
+        // For each vertex in obstacles
+        //   Check for each face of the springy mesh
+        //   the old face, and the new face.
+        //   From there, the logic is equivalent - it's just the plane is moving instead of the position, but the logic is the same, it's all relative.
+
+        // TODO then do edge-edge collisions (mesh's edge against environment edge)
         self.points = new_points;
+    }
+
+    fn get_collided_face<'a>(
+        &self,
+        old_point: &Point,
+        new_point: &Point,
+        faces: &'a Vec<&obstacle::Face>,
+        dt: Duration,
+    ) -> Option<&&'a obstacle::Face> {
+        faces.iter().find(|face| -> bool {
+            let old_position = old_point.position;
+            let old_velocity = old_point.velocity;
+            let new_position = new_point.velocity;
+
+            let old_distance_to_plane = face.distance_from_plane(&old_position);
+            let new_distance_to_plane = face.distance_from_plane(&new_position);
+
+            let crossed_plane = old_distance_to_plane.is_sign_positive()
+                != new_distance_to_plane.is_sign_positive();
+
+            if !crossed_plane {
+                return false;
+            }
+            // Get the point in the plane of the tri
+            let fraction_timestep =
+                old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
+            let collision_point =
+                old_position + dt.as_secs_f32() * fraction_timestep * old_velocity;
+            let face_normal = face.normal();
+            // Flatten the tri and the point into 2D to check containment.
+            let (v0_flat, v1_flat, v2_flat, point_flat) =
+                if face_normal.x >= face_normal.y && face_normal.x >= face_normal.z {
+                    // Eliminate the x component of all the elements
+                    let v0_flat = Vector3::<f32>::new(0.0, face.v0.y, face.v0.z);
+                    let v1_flat = Vector3::<f32>::new(0.0, face.v1.y, face.v1.z);
+                    let v2_flat = Vector3::<f32>::new(0.0, face.v2.y, face.v2.z);
+                    let point_flat = Vector3::<f32>::new(0.0, collision_point.y, collision_point.z);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                } else if face_normal.y >= face_normal.x && face_normal.y >= face_normal.z {
+                    // Eliminate the y component of all the elements
+                    let v0_flat = Vector3::<f32>::new(face.v0.x, 0.0, face.v0.z);
+                    let v1_flat = Vector3::<f32>::new(face.v1.x, 0.0, face.v1.z);
+                    let v2_flat = Vector3::<f32>::new(face.v2.x, 0.0, face.v2.z);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, 0.0, collision_point.z);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                } else {
+                    // Eliminate the z component of all the elements
+                    let v0_flat = Vector3::<f32>::new(face.v0.x, face.v0.y, 0.0);
+                    let v1_flat = Vector3::<f32>::new(face.v1.x, face.v1.y, 0.0);
+                    let v2_flat = Vector3::<f32>::new(face.v2.x, face.v2.y, 0.0);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, collision_point.y, 0.0);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                };
+            // Then check the point by comparing the orientation of the cross products
+            let cross0 = (v1_flat - v0_flat).cross(point_flat - v0_flat);
+            let cross1 = (v2_flat - v1_flat).cross(point_flat - v1_flat);
+            let cross2 = (v0_flat - v2_flat).cross(point_flat - v2_flat);
+            let cross0_orientation = cross0.dot(face.normal()).is_sign_positive();
+            let cross1_orientation = cross1.dot(face.normal()).is_sign_positive();
+            let cross2_orientation = cross2.dot(face.normal()).is_sign_positive();
+            // The point is in the polygon iff the orientation for all three cross products are equal.
+            cross0_orientation == cross1_orientation && cross1_orientation == cross2_orientation
+        })
     }
 
     /// Returns the vertices and their indices. Useful for making a mesh for rendering

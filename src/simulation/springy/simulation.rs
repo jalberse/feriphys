@@ -31,7 +31,7 @@ impl Simulation {
             let new_state_vector = state_vector.rk4_step(self.config.dt.as_secs_f32());
             let new_points = new_state_vector.get_elements();
 
-            mesh.update_points(new_points);
+            mesh.update_points(new_points, &self.obstacles, &self.config);
 
             mesh.clear_forces();
         });

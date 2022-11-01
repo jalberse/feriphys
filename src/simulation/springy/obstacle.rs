@@ -27,9 +27,9 @@ impl Edge {
 
 #[derive(Debug, PartialEq)]
 pub struct Face {
-    v0: Vector3<f32>,
-    v1: Vector3<f32>,
-    v2: Vector3<f32>,
+    pub v0: Vector3<f32>,
+    pub v1: Vector3<f32>,
+    pub v2: Vector3<f32>,
 }
 
 impl Face {
@@ -37,7 +37,7 @@ impl Face {
         (self.v1 - self.v0).cross(self.v2 - self.v0).normalize()
     }
 
-    pub fn distance(&self, point: cgmath::Vector3<f32>) -> f32 {
+    pub fn distance_from_plane(&self, point: &cgmath::Vector3<f32>) -> f32 {
         (point - self.v1).dot(self.normal())
     }
 }
