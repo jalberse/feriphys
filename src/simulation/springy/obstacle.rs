@@ -36,6 +36,10 @@ impl Face {
     pub fn normal(&self) -> Vector3<f32> {
         (self.v1 - self.v0).cross(self.v2 - self.v0).normalize()
     }
+
+    pub fn distance(&self, point: cgmath::Vector3<f32>) -> f32 {
+        (point - self.v1).dot(self.normal())
+    }
 }
 
 pub struct Obstacle {
