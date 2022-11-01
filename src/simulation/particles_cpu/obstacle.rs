@@ -97,7 +97,7 @@ impl Obstacle {
             } else {
                 // Get the point in the plane of the tri
                 let fraction_timestep =
-                    old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
+                    old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
 
                 let collision_point = old_position + dt * fraction_timestep * old_velocity;
 
