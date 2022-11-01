@@ -211,7 +211,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    // TODO get ui here.
+    let mut ui = gui::spring_mass_damper::SpringMassDamperUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -224,12 +224,20 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                // TODO sync the sim config from the ui.
+                state.simulation.sync_sim_config_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                // TODO call the gui render and add it to the submission below.
+                let gui_render_command_buffer = gui.render(
+                    &mut ui,
+                    frame_time,
+                    &state.gpu.device,
+                    &state.gpu.config,
+                    &state.gpu.queue,
+                    &window,
+                    &output
+                );
 
-                state.gpu.queue.submit([simulation_render_command_buffer]);
+                state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
                 output.present();
             }
             Event::DeviceEvent {

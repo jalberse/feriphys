@@ -8,12 +8,12 @@ use itertools::Itertools;
 use rustc_hash::FxHashMap;
 
 // TODO adjust these (or if these are "okay", we can use them and make them adjustable in UI)
-pub const STRUT_STIFFNESS_DEFAULT: f32 = 100.0;
-pub const STRUT_DAMPING_DEFAULT: f32 = 100.0;
+pub const STRUT_STIFFNESS_DEFAULT: f32 = 700.0;
+pub const STRUT_DAMPING_DEFAULT: f32 = 700.0;
 // Generally, torsional spring and damping parameters should be one or two orders of magnitude higher
 // than the corresponding strut parameters.
-pub const TORSIONAL_SPRING_STIFFNESS_DEFAULT: f32 = 100.0;
-pub const TORSIONAL_SPRING_DAMPING_DEFAULT: f32 = 30.0;
+pub const TORSIONAL_SPRING_STIFFNESS_DEFAULT: f32 = 7000.0;
+pub const TORSIONAL_SPRING_DAMPING_DEFAULT: f32 = 7000.0;
 
 // Spring and damper constants are chosen based on the desired strength of
 // a some spring of length NOMINAL_STRUT_LENGTH. Each strut's spring and
@@ -386,8 +386,12 @@ impl SpringyMesh {
 
         // Vertex-Face collisions
         for (new_point, old_point) in new_points.iter_mut().zip(&self.points) {
-            let collided_face_maybe =
-                self.get_collided_face(old_point, new_point, &obstacle_faces, config.dt);
+            let collided_face_maybe = self.get_collided_face(
+                old_point,
+                new_point,
+                &obstacle_faces,
+                Duration::from_secs_f32(config.dt),
+            );
             if let Some(face) = collided_face_maybe {
                 let old_distance_to_plane = face.distance_from_plane(&old_point.position);
                 let new_distance_to_plane = face.distance_from_plane(&new_point.position);
@@ -395,11 +399,10 @@ impl SpringyMesh {
                 let fraction_timestep =
                     old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
 
-                let collision_point = old_point.position
-                    + config.dt.as_secs_f32() * fraction_timestep * old_point.velocity;
+                let collision_point =
+                    old_point.position + config.dt * fraction_timestep * old_point.velocity;
                 let velocity_collision = old_point.velocity
-                    + config.dt.as_secs_f32() * fraction_timestep * old_point.accumulated_force
-                        / old_point.mass;
+                    + config.dt * fraction_timestep * old_point.accumulated_force / old_point.mass;
 
                 let new_position = collision_point + face.normal() * f32::EPSILON;
 

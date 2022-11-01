@@ -1,6 +1,7 @@
 pub mod bounce;
 pub mod flocking;
 pub mod particles;
+pub mod spring_mass_damper;
 
 use egui::FontDefinitions;
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
