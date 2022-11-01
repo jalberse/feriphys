@@ -409,7 +409,7 @@ impl SpringyMesh {
                 let new_distance_to_plane = face.distance_from_plane(&new_point.position);
 
                 let fraction_timestep =
-                    old_distance_to_plane / old_distance_to_plane - new_distance_to_plane;
+                    old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
 
                 let collision_point =
                     old_point.position + config.dt * fraction_timestep * old_point.velocity;
