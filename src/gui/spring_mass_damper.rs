@@ -78,7 +78,7 @@ impl SpringMassDamperUi {
     const GRAVITY_MAX: f32 = 20.0;
 
     const MIN_COEFFICIENT_OF_RESTITUTION: f32 = 0.0;
-    const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 2.0;
+    const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 1.0;
 
     const MIN_COEFFICIENT_OF_FRICTION: f32 = 0.0;
     const MAX_COEFFICIENT_OF_FRICTION: f32 = 1.0;
