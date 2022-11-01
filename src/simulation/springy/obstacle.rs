@@ -38,7 +38,7 @@ impl Face {
     }
 
     pub fn distance_from_plane(&self, point: &cgmath::Vector3<f32>) -> f32 {
-        (point - self.v1).dot(self.normal())
+        (point - self.v0).dot(self.normal())
     }
 }
 
