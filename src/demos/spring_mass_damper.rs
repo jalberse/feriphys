@@ -288,32 +288,32 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
         springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (0, 2),
+        (1, 3),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (1, 6),
+        (2, 5),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (5, 7),
+        (4, 6),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (3, 4),
+        (0, 7),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (1, 4),
+        (0, 5),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
     cube.add_strut(
-        (3, 6),
+        (2, 7),
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
     );
