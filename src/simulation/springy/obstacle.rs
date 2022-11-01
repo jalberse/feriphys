@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
-use cgmath::Vector3;
+use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;
 
-struct Vertex {
+pub struct Vertex {
     position: Vector3<f32>,
 }
 
@@ -14,7 +14,7 @@ impl Vertex {
 }
 
 #[derive(Debug, PartialEq)]
-struct Edge {
+pub struct Edge {
     v0: Vector3<f32>,
     v1: Vector3<f32>,
 }
@@ -26,10 +26,16 @@ impl Edge {
 }
 
 #[derive(Debug, PartialEq)]
-struct Face {
+pub struct Face {
     v0: Vector3<f32>,
     v1: Vector3<f32>,
     v2: Vector3<f32>,
+}
+
+impl Face {
+    pub fn normal(&self) -> Vector3<f32> {
+        (self.v1 - self.v0).cross(self.v2 - self.v0).normalize()
+    }
 }
 
 pub struct Obstacle {
@@ -91,7 +97,8 @@ impl Obstacle {
 
     // TODO This doesn't efficiently use indices, we repeat each vertex. We should properly use indexing,
     //  which will require more bookkeeping in Obstacle.
-    pub fn get_vertices(&self) -> (Vec<Vector3<f32>>, Vec<usize>) {
+    /// Gets vertices to render
+    pub fn get_vertices_to_render(&self) -> (Vec<Vector3<f32>>, Vec<usize>) {
         let vertex_positions = self.faces.iter().fold(Vec::new(), |mut array, f| {
             array.push(f.v0);
             array.push(f.v1);
@@ -100,6 +107,18 @@ impl Obstacle {
         });
         let vertex_indices = 0..self.faces.len() * 3;
         (vertex_positions, vertex_indices.collect_vec())
+    }
+
+    pub fn get_vertices(&self) -> &Vec<Vertex> {
+        &self.vertices
+    }
+
+    pub fn get_edges(&self) -> &Vec<Edge> {
+        &self.edges
+    }
+
+    pub fn get_faces(&self) -> &Vec<Face> {
+        &self.faces
     }
 }
 
