@@ -1,6 +1,12 @@
 use crate::utils;
 use itertools::{izip, Itertools};
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Integration {
+    Euler,
+    Rk4,
+}
+
 pub trait Stateful {
     /// Number of f32 elements that are used to represent this object in the State vector.
     fn num_state_elements() -> usize;

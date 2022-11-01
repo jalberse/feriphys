@@ -1,5 +1,6 @@
 use crate::gui::Ui;
 use crate::simulation::springy::config::Config;
+use crate::simulation::state::Integration;
 
 use egui::Slider;
 
@@ -10,6 +11,16 @@ pub struct SpringMassDamperUi {
 impl Ui for SpringMassDamperUi {
     fn ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("Config").show(&ctx, |ui| {
+            egui::ComboBox::from_label("Integration")
+                .selected_text(format!("{:?}", self.sim_config.integration))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.sim_config.integration, Integration::Rk4, "RK4");
+                    ui.selectable_value(
+                        &mut self.sim_config.integration,
+                        Integration::Euler,
+                        "Euler",
+                    );
+                });
             ui.add(
                 Slider::new(
                     &mut self.sim_config.dt,

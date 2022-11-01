@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use crate::gui;
+use crate::simulation::state::Integration;
 
 use super::super::state::State;
 use super::obstacle::Obstacle;
@@ -29,8 +30,10 @@ impl Simulation {
 
             let points = mesh.get_points();
             let state_vector = State::new(points.to_vec());
-            // TODO Allow us to use Euler, not RK4, to show simulation blowing up.
-            let new_state_vector = state_vector.rk4_step(self.config.dt);
+            let new_state_vector = match self.config.integration {
+                Integration::Rk4 => state_vector.rk4_step(self.config.dt),
+                Integration::Euler => state_vector.euler_step(self.config.dt),
+            };
             let new_points = new_state_vector.get_elements();
 
             mesh.update_points(new_points, &self.obstacles, &self.config);
@@ -60,6 +63,7 @@ impl Simulation {
         ui: &mut gui::spring_mass_damper::SpringMassDamperUi,
     ) {
         let ui_config_state = ui.get_gui_state_mut();
+        self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
         self.config.gravity = ui_config_state.gravity;
         self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
