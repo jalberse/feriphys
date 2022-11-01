@@ -463,7 +463,7 @@ impl SpringyMesh {
         faces.iter().find(|face| -> bool {
             let old_position = old_point.position;
             let old_velocity = old_point.velocity;
-            let new_position = new_point.velocity;
+            let new_position = new_point.position;
 
             let old_distance_to_plane = face.distance_from_plane(&old_position);
             let new_distance_to_plane = face.distance_from_plane(&new_position);
