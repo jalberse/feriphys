@@ -52,6 +52,43 @@ impl Ui for SpringMassDamperUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.wind.x,
+                    SpringMassDamperUi::WIND_MIN..=SpringMassDamperUi::WIND_MAX,
+                )
+                .text("Wind X"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.wind.y,
+                    SpringMassDamperUi::WIND_MIN..=SpringMassDamperUi::WIND_MAX,
+                )
+                .text("Wind Y"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.wind.z,
+                    SpringMassDamperUi::WIND_MIN..=SpringMassDamperUi::WIND_MAX,
+                )
+                .text("Wind Z"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.drag_coefficient,
+                    SpringMassDamperUi::MIN_COEFFICIENT_DRAG
+                        ..=SpringMassDamperUi::MAX_COEFFICIENT_DRAG,
+                )
+                .text("Drag"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.lift_coefficient,
+                    SpringMassDamperUi::MIN_COEFFICIENT_LIFT
+                        ..=SpringMassDamperUi::MAX_COEFFICIENT_LIFT,
+                )
+                .text("Lift"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.coefficient_of_restitution,
                     SpringMassDamperUi::MIN_COEFFICIENT_OF_RESTITUTION
                         ..=SpringMassDamperUi::MAX_COEFFICIENT_OF_RESTITUTION,
@@ -76,6 +113,15 @@ impl SpringMassDamperUi {
 
     const GRAVITY_MIN: f32 = -20.0;
     const GRAVITY_MAX: f32 = 20.0;
+
+    const WIND_MIN: f32 = -20.0;
+    const WIND_MAX: f32 = 20.0;
+
+    const MIN_COEFFICIENT_DRAG: f32 = 0.0;
+    const MAX_COEFFICIENT_DRAG: f32 = 1000.0;
+
+    const MIN_COEFFICIENT_LIFT: f32 = 0.0;
+    const MAX_COEFFICIENT_LIFT: f32 = 1000.0;
 
     const MIN_COEFFICIENT_OF_RESTITUTION: f32 = 0.0;
     const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 1.0;
