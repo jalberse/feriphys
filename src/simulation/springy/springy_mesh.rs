@@ -29,6 +29,20 @@ struct TorsionalSpring {
     rest_angle: Rad<f32>,
 }
 
+pub struct TorsionalSpringConfig {
+    spring_constant: f32,
+    spring_damping: f32,
+}
+
+impl Default for TorsionalSpringConfig {
+    fn default() -> Self {
+        TorsionalSpringConfig {
+            spring_constant: TORSIONAL_SPRING_STIFFNESS_DEFAULT,
+            spring_damping: TORSIONAL_SPRING_DAMPING_DEFAULT,
+        }
+    }
+}
+
 /// A strut is a 3D structural element for a Springy Mesh,
 /// made up of a spring and a damper connecting two point masses.
 /// The Strut also contains a torsional spring between the two adjacent
@@ -241,8 +255,7 @@ impl SpringyMesh {
         mass: f32,
         stiffness: f32,
         damping: f32,
-        torsional_spring_constant: f32,
-        torsional_spring_damping: f32,
+        torsional_spring_config: Option<TorsionalSpringConfig>,
     ) -> Self {
         let mass_per_vert = mass / vertex_positions.len() as f32;
 
@@ -306,47 +319,51 @@ impl SpringyMesh {
         }
 
         // Now that struts are aware of their adjacent faces, add a torsional spring if necessary.
-        let mut strut_rest_angles = FxHashMap::<usize, Rad<f32>>::default();
-        for (strut_index, strut) in struts.iter().enumerate() {
-            if let (Some(f1_index), Some(f2_index)) = (strut.face_indices.0, strut.face_indices.1) {
-                // TODO try to share this code and torsional force finding code
-                let x_0_index = strut.vertex_indices.0;
-                let x_0 = &points[x_0_index];
-                let x_1_index = strut.vertex_indices.1;
-                let x_1 = &points[x_1_index];
-                let h = (x_1.position - x_0.position).normalize();
-                let f1 = &faces[f1_index];
-                let f2 = &faces[f2_index];
-                // x_2 lies on f_1, or the "left", i.e. _l triangle
-                let x_2_index =
-                    crate::utils::tuple_difference(f1.vertex_indices, strut.vertex_indices);
-                let x_2 = &points[x_2_index];
-                // x_3 lies on f_2, or the "right", i.e. _r triangle
-                let x_3_index =
-                    crate::utils::tuple_difference(f2.vertex_indices, strut.vertex_indices);
-                let x_3 = &points[x_3_index];
+        if let Some(torsional_spring_config) = torsional_spring_config {
+            let mut strut_rest_angles = FxHashMap::<usize, Rad<f32>>::default();
+            for (strut_index, strut) in struts.iter().enumerate() {
+                if let (Some(f1_index), Some(f2_index)) =
+                    (strut.face_indices.0, strut.face_indices.1)
+                {
+                    // TODO try to share this code and torsional force finding code
+                    let x_0_index = strut.vertex_indices.0;
+                    let x_0 = &points[x_0_index];
+                    let x_1_index = strut.vertex_indices.1;
+                    let x_1 = &points[x_1_index];
+                    let h = (x_1.position - x_0.position).normalize();
+                    let f1 = &faces[f1_index];
+                    let f2 = &faces[f2_index];
+                    // x_2 lies on f_1, or the "left", i.e. _l triangle
+                    let x_2_index =
+                        crate::utils::tuple_difference(f1.vertex_indices, strut.vertex_indices);
+                    let x_2 = &points[x_2_index];
+                    // x_3 lies on f_2, or the "right", i.e. _r triangle
+                    let x_3_index =
+                        crate::utils::tuple_difference(f2.vertex_indices, strut.vertex_indices);
+                    let x_3 = &points[x_3_index];
 
-                let normal_l = (x_2.position - x_0.position)
-                    .cross(x_1.position - x_0.position)
-                    .normalize();
-                let normal_r = (x_1.position - x_0.position)
-                    .cross(x_3.position - x_0.position)
-                    .normalize();
+                    let normal_l = (x_2.position - x_0.position)
+                        .cross(x_1.position - x_0.position)
+                        .normalize();
+                    let normal_r = (x_1.position - x_0.position)
+                        .cross(x_3.position - x_0.position)
+                        .normalize();
 
-                let theta = Rad(f32::atan2(
-                    normal_l.cross(normal_r).dot(h),
-                    normal_l.dot(normal_r),
-                ));
+                    let theta = Rad(f32::atan2(
+                        normal_l.cross(normal_r).dot(h),
+                        normal_l.dot(normal_r),
+                    ));
 
-                strut_rest_angles.insert(strut_index, theta);
+                    strut_rest_angles.insert(strut_index, theta);
+                }
             }
-        }
-        for (strut_index, angle) in strut_rest_angles.iter() {
-            struts[*strut_index].torsional_spring = Some(TorsionalSpring {
-                spring_constant: torsional_spring_constant,
-                damping: torsional_spring_damping,
-                rest_angle: *angle,
-            });
+            for (strut_index, angle) in strut_rest_angles.iter() {
+                struts[*strut_index].torsional_spring = Some(TorsionalSpring {
+                    spring_constant: torsional_spring_config.spring_constant,
+                    damping: torsional_spring_config.spring_damping,
+                    rest_angle: *angle,
+                });
+            }
         }
 
         SpringyMesh {
@@ -658,7 +675,7 @@ mod tests {
 
     use crate::simulation::springy::springy_mesh::NOMINAL_STRUT_LENGTH;
 
-    use super::SpringyMesh;
+    use super::{SpringyMesh, TorsionalSpringConfig};
 
     fn get_triangle() -> super::SpringyMesh {
         let vertex_positions = vec![
@@ -667,7 +684,18 @@ mod tests {
             Vector3::<f32>::unit_y(),
         ];
         let vertex_indices = vec![0, 1, 2];
-        super::SpringyMesh::new(vertex_positions, vertex_indices, 1.0, 2.0, 3.0, 4.0, 5.0)
+        let tort_cfg = TorsionalSpringConfig {
+            spring_constant: 4.0,
+            spring_damping: 5.0,
+        };
+        super::SpringyMesh::new(
+            vertex_positions,
+            vertex_indices,
+            1.0,
+            2.0,
+            3.0,
+            Some(tort_cfg),
+        )
     }
 
     // A SpringyMesh made up of a strip of triangles. The last triangle is bent 90 degrees.
@@ -681,7 +709,18 @@ mod tests {
             Vector3::<f32>::unit_y() + Vector3::<f32>::unit_x(),
         ];
         let vertex_indices = vec![0, 4, 3, 0, 1, 4, 1, 5, 4, 1, 2, 5];
-        SpringyMesh::new(vertex_positions, vertex_indices, 1.0, 2.0, 3.0, 4.0, 5.0)
+        let tort_cfg = TorsionalSpringConfig {
+            spring_constant: 4.0,
+            spring_damping: 5.0,
+        };
+        super::SpringyMesh::new(
+            vertex_positions,
+            vertex_indices,
+            1.0,
+            2.0,
+            3.0,
+            Some(tort_cfg),
+        )
     }
 
     #[test]
@@ -860,7 +899,11 @@ mod tests {
                 + Vector3::<f32>::unit_y() * f32::sqrt(2.0) / 2.0, // Other face, at a 45 degree angle
         ];
         let indices = vec![1, 2, 0, 3, 1, 0];
-        let mut mesh = SpringyMesh::new(vertices, indices, 2.0, 1.0, 1.0, 1.0, 1.0);
+        let tort_cfg = TorsionalSpringConfig {
+            spring_constant: 1.0,
+            spring_damping: 1.0,
+        };
+        let mut mesh = SpringyMesh::new(vertices, indices, 2.0, 1.0, 1.0, Some(tort_cfg));
 
         assert_relative_eq!(
             -Vector3::<f32>::unit_y(),
@@ -895,6 +938,23 @@ mod tests {
                 + mesh.points[3].accumulated_force
         );
         mesh.clear_forces();
+    }
+
+    #[test]
+    fn disable_torsional_springs() {
+        let vertex_positions = vec![
+            Vector3::<f32>::zero(),
+            Vector3::<f32>::unit_x(),
+            Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z(),
+            Vector3::<f32>::unit_y() - Vector3::<f32>::unit_x(),
+            Vector3::<f32>::unit_y(),
+            Vector3::<f32>::unit_y() + Vector3::<f32>::unit_x(),
+        ];
+        let vertex_indices = vec![0, 4, 3, 0, 1, 4, 1, 5, 4, 1, 2, 5];
+        let strip = super::SpringyMesh::new(vertex_positions, vertex_indices, 1.0, 2.0, 3.0, None);
+        for i in 0..9 {
+            assert!(strip.struts[i].torsional_spring.is_none());
+        }
     }
 
     // TODO Torsional forces unit test with on obtuse angle between the faces

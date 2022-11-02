@@ -284,8 +284,7 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
         8.0 * 10.0,
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_STIFFNESS_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
+        Some(springy_mesh::TorsionalSpringConfig::default()),
     );
     cube.add_strut(
         (1, 3),
@@ -333,8 +332,7 @@ fn get_springy_tri() -> springy_mesh::SpringyMesh {
         20.0,
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_STIFFNESS_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
+        Some(springy_mesh::TorsionalSpringConfig::default()),
     )
 }
 
@@ -352,8 +350,7 @@ fn get_springy_quad() -> springy_mesh::SpringyMesh {
         20.0,
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_STIFFNESS_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
+        Some(springy_mesh::TorsionalSpringConfig::default()),
     )
 }
 
@@ -371,8 +368,7 @@ fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
         20.0,
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_STIFFNESS_DEFAULT,
-        springy_mesh::TORSIONAL_SPRING_DAMPING_DEFAULT,
+        Some(springy_mesh::TorsionalSpringConfig::default()),
     )
 }
 
