@@ -34,6 +34,12 @@ pub struct TorsionalSpringConfig {
     spring_damping: f32,
 }
 
+#[derive(Copy, Clone)]
+pub struct SpringConfig {
+    pub constant: f32,
+    pub damping: f32,
+}
+
 impl Default for TorsionalSpringConfig {
     fn default() -> Self {
         TorsionalSpringConfig {
@@ -87,12 +93,12 @@ impl Strut {
 //   the strut de-duplication.
 /// Key for a Map between pairs of vertex indices to Struts
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
-struct StrutKey {
+pub struct StrutKey {
     key: (usize, usize),
 }
 
 impl StrutKey {
-    fn new(k1: usize, k2: usize) -> StrutKey {
+    pub fn new(k1: usize, k2: usize) -> StrutKey {
         StrutKey {
             key: if k1 <= k2 { (k1, k2) } else { (k2, k1) },
         }
@@ -254,9 +260,10 @@ impl SpringyMesh {
         vertex_indices: Vec<usize>,
         // Total mass of the mesh
         mass: f32,
-        stiffness: f32,
-        damping: f32,
+        default_stiffness: f32,
+        default_damping: f32,
         torsional_spring_config: Option<TorsionalSpringConfig>,
+        strut_overrides: &Option<FxHashMap<StrutKey, SpringConfig>>,
     ) -> Self {
         let mass_per_vert = mass / vertex_positions.len() as f32;
 
@@ -272,6 +279,15 @@ impl SpringyMesh {
                 let strut_key = StrutKey::new(i1, i2);
                 if strut_indices.get(&strut_key).is_none() {
                     strut_indices.insert(strut_key, struts.len());
+                    let (stiffness, damping) = if let Some(override_map) = strut_overrides {
+                        if let Some(override_cfg) = override_map.get(&strut_key) {
+                            (override_cfg.constant, override_cfg.damping)
+                        } else {
+                            (default_stiffness, default_damping)
+                        }
+                    } else {
+                        (default_stiffness, default_damping)
+                    };
                     struts.push(Strut::new(
                         stiffness,
                         damping,
@@ -710,6 +726,7 @@ mod tests {
             2.0,
             3.0,
             Some(tort_cfg),
+            &None,
         )
     }
 
@@ -735,6 +752,7 @@ mod tests {
             2.0,
             3.0,
             Some(tort_cfg),
+            &None,
         )
     }
 
@@ -918,7 +936,7 @@ mod tests {
             spring_constant: 1.0,
             spring_damping: 1.0,
         };
-        let mut mesh = SpringyMesh::new(vertices, indices, 2.0, 1.0, 1.0, Some(tort_cfg));
+        let mut mesh = SpringyMesh::new(vertices, indices, 2.0, 1.0, 1.0, Some(tort_cfg), &None);
 
         assert_relative_eq!(
             -Vector3::<f32>::unit_y(),
@@ -966,7 +984,8 @@ mod tests {
             Vector3::<f32>::unit_y() + Vector3::<f32>::unit_x(),
         ];
         let vertex_indices = vec![0, 4, 3, 0, 1, 4, 1, 5, 4, 1, 2, 5];
-        let strip = super::SpringyMesh::new(vertex_positions, vertex_indices, 1.0, 2.0, 3.0, None);
+        let strip =
+            super::SpringyMesh::new(vertex_positions, vertex_indices, 1.0, 2.0, 3.0, None, &None);
         for i in 0..9 {
             assert!(strip.struts[i].torsional_spring.is_none());
         }

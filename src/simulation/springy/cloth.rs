@@ -1,9 +1,10 @@
 /// Cloth is simulated as a spring-mass-damper mesh.
 // TODO we should have a boolean to say, dont' make any torsional springs for struts for this mesh
-use super::springy_mesh::SpringyMesh;
+use super::springy_mesh::{SpringConfig, SpringyMesh, StrutKey};
 
 use cgmath::Vector3;
 use itertools::Itertools;
+use rustc_hash::FxHashMap;
 
 pub struct Cloth {
     pub mesh: SpringyMesh,
@@ -25,6 +26,8 @@ impl Cloth {
         point_mass: f32,
         tensile_stiffness: f32,
         tensile_damping: f32,
+        shear_stiffness: f32,
+        shear_damping: f32,
         binding_spring_stiffness: f32,
         binding_spring_damping: f32,
         pinned_vertices: Vec<usize>,
@@ -52,6 +55,12 @@ impl Cloth {
             .map(|v| v + position)
             .collect_vec();
 
+        let mut shear_overrides = FxHashMap::default();
+        let shear_cfg = SpringConfig {
+            constant: shear_stiffness,
+            damping: shear_damping,
+        };
+
         // Generate the top left tri of each "quad" formed by the grid.
         let mut indices = Vec::new();
         for row in 0..(rows - 1) {
@@ -60,6 +69,8 @@ impl Cloth {
                 indices.push(i + 1);
                 indices.push(i + cols);
                 indices.push(i);
+
+                shear_overrides.insert(StrutKey::new(i + cols, i + 1), shear_cfg.clone());
             }
         }
         // Generate the bottom right tri of each quad formed by the grid.
@@ -73,13 +84,6 @@ impl Cloth {
         }
         let indices = indices;
 
-        // TODO critically, the shear springs are already included here as the diagonals,
-        //      but they need to have their own (order of magnitude weaker) strength compared to the tensile springs.
-        //      That means we need SpringyMesh::new() to intelligently apply different parameters for these shear springs.
-        //      I think we might want to pass in a map between index pairs and spring cfgs.
-        //      That would let us override the default stiffness/damping for any entry in that map.
-        //      Then, here, we just need to add the diagonal index pairs to a set.
-
         let mut mesh = SpringyMesh::new(
             vertex_positions,
             indices,
@@ -87,6 +91,7 @@ impl Cloth {
             tensile_stiffness,
             tensile_damping,
             None,
+            &Some(shear_overrides),
         );
         for pin_index in pinned_vertices.iter() {
             mesh.add_pin(*pin_index)
