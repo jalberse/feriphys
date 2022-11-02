@@ -74,16 +74,12 @@ impl Simulation {
         // TODO if initial_positions is empty, this crashes. Fix that.
         for position in &initial_positions {
             for _ in 0..num_boids / initial_positions.len() as u32 {
-                let position = Vector3::<f32> {
-                    x: position.x + rand::random::<f32>(),
-                    y: position.y + rand::random::<f32>(),
-                    z: position.z + rand::random::<f32>(),
-                };
-                let velocity = Vector3::<f32> {
-                    x: rand::random(),
-                    y: rand::random(),
-                    z: rand::random(),
-                };
+                let position = Vector3::<f32>::new(
+                    position.x + rand::random::<f32>(),
+                    position.y + rand::random::<f32>(),
+                    position.z + rand::random::<f32>(),
+                );
+                let velocity = Vector3::<f32>::new(rand::random(), rand::random(), rand::random());
                 boids.push(FlockingBoid::new(position, velocity));
             }
         }

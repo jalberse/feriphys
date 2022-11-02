@@ -1,3 +1,5 @@
+use cgmath::InnerSpace;
+use itertools::Itertools;
 use wgpu::{BindGroupLayout, RenderPipeline};
 
 use crate::{
@@ -169,4 +171,29 @@ pub fn resize(
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth_texture");
         projection.resize(new_size.width, new_size.height)
     }
+}
+
+/// Gets the vertex normals corresponding to vertex_positions, using the average of
+/// the normals for all adjacent faces.
+pub fn get_normals(
+    vertex_positions: &Vec<cgmath::Vector3<f32>>,
+    indices: &Vec<u16>,
+) -> Vec<cgmath::Vector3<f32>> {
+    let mut normals = Vec::new();
+    for _ in 0..vertex_positions.len() {
+        normals.push(cgmath::Vector3::new(0.0, 0.0, 0.0));
+    }
+    for (a, b, c) in indices.iter().tuples() {
+        let edge1 = vertex_positions[*a as usize] - vertex_positions[*b as usize];
+        let edge2 = vertex_positions[*a as usize] - vertex_positions[*c as usize];
+        let face_normal = edge1.cross(edge2);
+        // Add this face's normal to each vertex's normal.
+        normals[*a as usize] += face_normal;
+        normals[*b as usize] += face_normal;
+        normals[*c as usize] += face_normal;
+    }
+    normals
+        .iter()
+        .map(|n| n.normalize())
+        .collect::<Vec<cgmath::Vector3<f32>>>()
 }

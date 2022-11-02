@@ -17,6 +17,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+use super::utils;
+
 // The indices of the models in the scene in their respective instance buffers.
 // This practice should be abstracted away in the future, but since we have only 3
 // objects right now, we'll manually keep track of indices.
@@ -57,7 +59,8 @@ impl State {
 
         let texture_bind_group_layout = graphics::util::create_texture_bind_group_layout(&gpu);
 
-        let camera_bundle = CameraBundle::new(&gpu);
+        let camera_bundle =
+            CameraBundle::new(&gpu, (0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
 
         let light_uniform = light::LightUniform::new([6.0, 2.0, 6.0], [1.0, 1.0, 1.0]);
         let (light_bind_group_layout, light_bind_group) =
@@ -240,33 +243,7 @@ impl State {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        virtual_keycode: Some(key),
-                        state,
-                        ..
-                    },
-                ..
-            } => self
-                .camera_bundle
-                .camera_controller
-                .process_keyboard(*key, *state),
-            WindowEvent::MouseWheel { delta, .. } => {
-                self.camera_bundle.camera_controller.process_scroll(delta);
-                true
-            }
-            WindowEvent::MouseInput {
-                button: MouseButton::Left,
-                state,
-                ..
-            } => {
-                self.mouse_pressed = *state == ElementState::Pressed;
-                true
-            }
-            _ => false,
-        }
+        utils::handle_input_default(event, &mut self.camera_bundle, &mut self.mouse_pressed)
     }
 
     fn update(&mut self, frame_time: std::time::Duration) {
@@ -317,35 +294,8 @@ impl State {
         // begin_render_pass borrows encoder mutably, so we start a new block
         // so that we drop render_pass, so that we can use encoder later.
         {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    // texture to save the colors into
-                    view: &view,
-                    // The texture that will receive the resolved output; defaults to view.
-                    resolve_target: None,
-                    // Tells wgpu what to do with the colors on the screen (i.e. in view).
-                    ops: wgpu::Operations {
-                        // load tells wgpu how to handle colors from the previous screen.
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        // If we want to store the rendered results to the Texture behind out TextureView.
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
+            let mut render_pass =
+                utils::begin_default_render_pass(&mut encoder, &view, &self.depth_texture.view);
 
             render_pass.set_vertex_buffer(1, self.static_instance_buffer.slice(..));
             render_pass.set_pipeline(&self.light_render_pipeline);

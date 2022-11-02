@@ -1,7 +1,14 @@
-use crate::graphics::texture;
+use crate::{
+    graphics::texture, simulation::springy::obstacle,
+    simulation::springy::springy_mesh::SpringyMesh,
+};
 
 use cgmath::Vector3;
 use core::ops::Range;
+use itertools::Itertools;
+use wgpu::util::DeviceExt;
+
+use super::util::get_normals;
 
 pub trait Vertex {
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a>;
@@ -38,6 +45,118 @@ pub struct ColoredMesh {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub num_elements: u32,
+}
+
+impl ColoredMesh {
+    pub fn new(
+        device: &wgpu::Device,
+        name: String,
+        vertex_positions: Vec<Vector3<f32>>,
+        vertex_indices: Vec<u16>,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    pub fn from_springy_mesh(
+        device: &wgpu::Device,
+        name: String,
+        springy_mesh: &SpringyMesh,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        let (vertex_positions, vertex_indices) = springy_mesh.get_vertices();
+        let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    pub fn from_obstacle(
+        device: &wgpu::Device,
+        name: String,
+        springy_mesh: &obstacle::Obstacle,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        // TODO get_vertices() can be made into a Trait so this fn can be generalized with from_springy_mesh
+        let (vertex_positions, vertex_indices) = springy_mesh.get_vertices_to_render();
+        let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    /// Gets the vertex buffer and index buffer, respectively.
+    fn get_buffers(
+        device: &wgpu::Device,
+        vertex_positions: &Vec<Vector3<f32>>,
+        indices: &Vec<u16>,
+        color: [f32; 3],
+    ) -> (wgpu::Buffer, wgpu::Buffer) {
+        let normals = get_normals(&vertex_positions, &indices);
+        let vertices = Self::get_colored_vertices(&vertex_positions, &normals, color);
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("mesh colored vertex buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("mesh colored index buffer"),
+            contents: bytemuck::cast_slice(&indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        (vertex_buffer, index_buffer)
+    }
+
+    /// Zips the vertex positions with their normals, and adds the color,
+    /// to get the ColoredVertex. Normals can be gotten from vertex positions
+    /// and their indices using get_normals().
+    ///
+    /// Panics if vertex_position and normals are of different lengths.
+    fn get_colored_vertices(
+        vertex_positions: &Vec<cgmath::Vector3<f32>>,
+        normals: &Vec<cgmath::Vector3<f32>>,
+        color: [f32; 3],
+    ) -> Vec<ColoredVertex> {
+        vertex_positions
+            .iter()
+            .zip(normals.iter())
+            .map(|(v, n)| -> ColoredVertex {
+                ColoredVertex {
+                    position: [v.x, v.y, v.z],
+                    color,
+                    normal: [n.x, n.y, n.z],
+                }
+            })
+            .collect::<Vec<_>>()
+    }
 }
 
 pub trait DrawColoredMesh<'a> {

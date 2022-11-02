@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["flocking"],
+            "args": ["cloth"],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -38,7 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["--test-threads=1"],
             "cwd": "${workspaceFolder}"
         }
     ]

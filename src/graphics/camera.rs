@@ -228,8 +228,13 @@ pub struct CameraBundle {
 }
 
 impl CameraBundle {
-    pub fn new(gpu: &GPUInterface) -> CameraBundle {
-        let camera = Camera::new((0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+    pub fn new<V: Into<Point3<f32>>, Y: Into<Rad<f32>>, P: Into<Rad<f32>>>(
+        gpu: &GPUInterface,
+        position: V,
+        yaw: Y,
+        pitch: P,
+    ) -> CameraBundle {
+        let camera = Camera::new(position, yaw, pitch);
         let projection = Projection::new(
             gpu.config.width,
             gpu.config.height,

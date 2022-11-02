@@ -5,6 +5,8 @@ pub enum Demos {
     BouncingBall,
     ParticlesCpu,
     Flocking,
+    SpringMassDamper,
+    Cloth,
 }
 
 #[derive(Parser)]

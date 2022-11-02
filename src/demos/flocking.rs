@@ -10,13 +10,15 @@ use crate::{
     },
 };
 
-use cgmath::{Rotation3, Vector3};
+use cgmath::{Rotation3, Vector3, Zero};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::Window,
     window::WindowBuilder,
 };
+
+use super::utils;
 
 struct State {
     gpu: GPUInterface,
@@ -40,7 +42,8 @@ struct State {
 impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
-        let camera_bundle = CameraBundle::new(&gpu);
+        let camera_bundle =
+            CameraBundle::new(&gpu, (0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let depth_texture =
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth texture");
 
@@ -70,11 +73,7 @@ impl State {
         )
         .unwrap();
         let seafloor_tile_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            position: Vector3::<f32>::zero(),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
@@ -91,11 +90,7 @@ impl State {
         )
         .unwrap();
         let ship_instances = vec![Instance {
-            position: Vector3::<f32> {
-                x: -5.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            position: Vector3::<f32>::new(-5.0, 0.0, 0.0),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
@@ -108,19 +103,11 @@ impl State {
 
         // Set up the first simulation
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 25.0 * f32::cos(t / 12.0),
-                y: 0.5,
-                z: 0.0,
-            }
+            Vector3::<f32>::new(25.0 * f32::cos(t / 12.0), 0.5, 0.0)
         });
         let lead_boids = Some(vec![lead_boid]);
 
-        let initial_boids_position = Vector3::<f32> {
-            x: 25.0,
-            y: 0.5,
-            z: 0.0,
-        };
+        let initial_boids_position = Vector3::<f32>::new(25.0, 0.5, 0.0);
 
         let num_boids = if cfg!(debug_assertions) { 30 } else { 110 };
 
@@ -146,29 +133,17 @@ impl State {
         let boids_entity = Entity::new(&gpu, fish_model, instances);
 
         // Set up the second simulation that we'll display alongside the first
-        let initial_boids_position_2_0 = Vector3::<f32> {
-            x: 15.0,
-            y: 10.0,
-            z: 0.0,
-        };
-        let initial_boids_position_2_1 = Vector3::<f32> {
-            x: 25.0,
-            y: 0.5,
-            z: 0.0,
-        };
+        let initial_boids_position_2_0 = Vector3::<f32>::new(15.0, 10.0, 0.0);
+        let initial_boids_position_2_1 = Vector3::<f32>::new(25.0, 0.5, 0.0);
         let lead_boid = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 15.0 * f32::cos(t / 12.0),
-                y: 6.0 + 5.0 * f32::cos(t / 12.0),
-                z: 15.0 * f32::sin(t / 12.0),
-            }
+            Vector3::<f32>::new(
+                15.0 * f32::cos(t / 12.0),
+                6.0 + 5.0 * f32::cos(t / 12.0),
+                15.0 * f32::sin(t / 12.0),
+            )
         });
         let lead_boid_2 = simulation::flocking::boid::LeadBoid::new(|t| -> Vector3<f32> {
-            Vector3::<f32> {
-                x: 25.0 * f32::cos(t / 10.0),
-                y: 1.0,
-                z: 10.0 * f32::sin(t / 9.0),
-            }
+            Vector3::<f32>::new(25.0 * f32::cos(t / 10.0), 1.0, 10.0 * f32::sin(t / 9.0))
         });
         let lead_boids = Some(vec![lead_boid, lead_boid_2]);
         let simulation_2 = flocking::Simulation::new(
@@ -229,33 +204,7 @@ impl State {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        virtual_keycode: Some(key),
-                        state,
-                        ..
-                    },
-                ..
-            } => self
-                .camera_bundle
-                .camera_controller
-                .process_keyboard(*key, *state),
-            WindowEvent::MouseWheel { delta, .. } => {
-                self.camera_bundle.camera_controller.process_scroll(delta);
-                true
-            }
-            WindowEvent::MouseInput {
-                button: MouseButton::Left,
-                state,
-                ..
-            } => {
-                self.mouse_pressed = *state == ElementState::Pressed;
-                true
-            }
-            _ => false,
-        }
+        utils::handle_input_default(event, &mut self.camera_bundle, &mut self.mouse_pressed)
     }
 
     fn update(&mut self, frame_time: std::time::Duration) {
@@ -296,35 +245,8 @@ impl State {
             });
 
         {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    // texture to save the colors into
-                    view: &view,
-                    // The texture that will receive the resolved output; defaults to view.
-                    resolve_target: None,
-                    // Tells wgpu what to do with the colors on the screen (i.e. in view).
-                    ops: wgpu::Operations {
-                        // load tells wgpu how to handle colors from the previous screen.
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        // If we want to store the rendered results to the Texture behind out TextureView.
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
+            let mut render_pass =
+                utils::begin_default_render_pass(&mut encoder, &view, &self.depth_texture.view);
 
             render_pass.set_pipeline(&self.model_render_pipeline);
             self.scene.draw_entities(

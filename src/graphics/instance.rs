@@ -1,5 +1,6 @@
 use super::gpu_interface::GPUInterface;
 
+use cgmath::{Rotation3, Vector3, Zero};
 use wgpu::{Buffer, BufferDescriptor};
 
 /// Stores an instance's transformations.
@@ -17,6 +18,19 @@ impl Instance {
         InstanceRaw {
             model: model.into(),
             normal: cgmath::Matrix3::from(self.rotation).into(),
+        }
+    }
+}
+
+impl Default for Instance {
+    fn default() -> Self {
+        Instance {
+            position: Vector3::<f32>::zero(),
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            scale: 1.0,
         }
     }
 }

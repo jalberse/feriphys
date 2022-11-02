@@ -1,19 +1,16 @@
-use super::utils;
-use crate::graphics;
-use crate::graphics::camera::CameraBundle;
-use crate::graphics::entity::ColoredMeshEntity;
-use crate::graphics::forms;
-use crate::graphics::gpu_interface::GPUInterface;
-use crate::graphics::instance::Instance;
-use crate::graphics::light;
-use crate::graphics::scene::Scene;
-use crate::graphics::texture;
-use crate::gui;
-use crate::simulation;
+/// A demo of the spring-mass-damper simulation.
+use crate::{
+    graphics::{
+        self, camera::CameraBundle, entity::ColoredMeshEntity, gpu_interface::GPUInterface,
+        instance::Instance, light, model::ColoredMesh, scene::Scene, texture,
+    },
+    gui,
+    simulation::springy::cloth::Cloth,
+    simulation::springy::springy_mesh::{self, SpringyMesh},
+    simulation::springy::{obstacle::Obstacle, simulation::Simulation},
+};
 
-use cgmath::Rotation3;
-use cgmath::Vector3;
-use cgmath::Zero;
+use cgmath::{Vector3, Zero};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -21,13 +18,15 @@ use winit::{
     window::WindowBuilder,
 };
 
+use super::utils;
+
 struct State {
+    simulation: Simulation,
     gpu: GPUInterface,
     render_pipeline: wgpu::RenderPipeline,
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    simulation_state: simulation::particles_cpu::particles::Simulation,
     scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
@@ -36,9 +35,8 @@ struct State {
 impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
-
         let camera_bundle =
-            CameraBundle::new(&gpu, (0.0, 1.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+            CameraBundle::new(&gpu, (0.0, 0.0, 5.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let depth_texture =
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth texture");
 
@@ -52,34 +50,37 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let obstacle = forms::get_cube_kilter(&gpu.device, [0.9, 0.1, 0.1]);
-
-        let simulation_state = simulation::particles_cpu::particles::Simulation::new(&obstacle);
-
-        let instances = vec![Instance {
-            position: Vector3::<f32>::zero(),
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            scale: 1.0,
-        }];
-        let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances);
-
-        let particles_entity = simulation_state.get_particles_entity(&gpu);
-        let scene = Scene::new(
-            None,
-            Some(vec![obstacle_entity]),
-            Some(vec![particles_entity]),
+        let rows = 20 as usize;
+        let cols = 20 as usize;
+        let tablecloth = Cloth::new(
+            rows,
+            cols,
+            0.1,
+            Vector3::<f32>::zero(),
+            10.0,
+            1000.0,
+            200.0,
+            vec![
+                rows * cols - 1,
+                (rows * cols) - cols,
+                (rows * cols) - (cols / 2),
+            ],
         );
+        let tablecloth_mesh = tablecloth.mesh;
+        let obstacles = get_obstacles();
+        let simulation = Simulation::new(vec![tablecloth_mesh], obstacles);
+
+        // Note we're keeping the scene around since we'll probably have some static obstacles that we'd like to draw
+        // for the springy mesh to interact with.
+        let scene = Scene::new(None, None, None);
 
         Self {
+            simulation,
             gpu,
             render_pipeline,
             depth_texture,
             camera_bundle,
             light_bind_group,
-            simulation_state,
             scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
@@ -103,19 +104,10 @@ impl State {
         self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // Simulate until our simulation has "consumed" the accumulated time in discrete, fixed timesteps.
-        while self.time_accumulator >= self.simulation_state.get_timestep() {
-            let elapsed_sim_time = self.simulation_state.step();
+        while self.time_accumulator >= self.simulation.get_timestep() {
+            let elapsed_sim_time = self.simulation.step();
             self.time_accumulator = self.time_accumulator - elapsed_sim_time;
         }
-
-        let particle_instances = self.simulation_state.get_particles_instances();
-        self.scene.update_particle_instances(
-            &self.gpu,
-            0,
-            particle_instances,
-            self.camera_bundle.camera.position,
-        );
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -131,12 +123,42 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
+        // TODO handle rendering *all* springy meshes in simulation
+        let cube_mesh = ColoredMesh::from_springy_mesh(
+            &self.gpu.device,
+            "springy cube".to_string(),
+            &self.simulation.get_meshes()[0],
+            [0.9, 0.1, 0.1],
+        );
+        let cube_instances = vec![Instance::default()];
+        let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances);
+
+        // TODO handle rendering *all* obstacles in simulation
+        let obstacle_mesh = ColoredMesh::from_obstacle(
+            &self.gpu.device,
+            "floor".to_string(),
+            &self.simulation.get_obstacles()[0],
+            [0.1, 0.9, 0.1],
+        );
+        let obstacle_instances = vec![Instance::default()];
+        let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
+
         {
             let mut render_pass =
                 utils::begin_default_render_pass(&mut encoder, &view, &self.depth_texture.view);
 
             render_pass.set_pipeline(&self.render_pipeline);
             self.scene.draw_colored_mesh_entities(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
+            cube_entity.draw(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
+            obstacle_entity.draw(
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
@@ -152,13 +174,10 @@ pub fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    // Our game loop follows the famous "fix your timestep!" model:
-    // https://gafferongames.com/post/fix_your_timestep/
-    // The state holds the accumulator.
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut particles_ui = gui::particles::ParticlesUi::new();
+    let mut ui = gui::spring_mass_damper::SpringMassDamperUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -171,11 +190,11 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                state.simulation_state.sync_sim_config_from_ui(&mut particles_ui);
+                state.simulation.sync_sim_config_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
                 let gui_render_command_buffer = gui.render(
-                    &mut particles_ui,
+                    &mut ui,
                     frame_time,
                     &state.gpu.device,
                     &state.gpu.config,
@@ -221,4 +240,15 @@ pub fn run() {
             _ => {}
         }
     });
+}
+
+fn get_obstacles() -> Vec<Obstacle> {
+    let vertex_positions = vec![
+        -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+    ];
+    let indices = vec![0, 1, 2, 0, 2, 3];
+    vec![Obstacle::new(vertex_positions, indices)]
 }
