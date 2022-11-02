@@ -6,7 +6,6 @@ use crate::{
     },
     gui,
     simulation::springy::cloth::Cloth,
-    simulation::springy::springy_mesh::{self, SpringyMesh},
     simulation::springy::{obstacle::Obstacle, simulation::Simulation},
 };
 
@@ -58,8 +57,12 @@ impl State {
             0.1,
             Vector3::<f32>::zero(),
             10.0,
-            1000.0,
+            2000.0,
             200.0,
+            500.0,
+            20.0,
+            5.0,
+            2.0,
             vec![
                 rows * cols - 1,
                 (rows * cols) - cols,

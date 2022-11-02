@@ -9,7 +9,7 @@ use crate::{
     simulation::springy::{obstacle::Obstacle, simulation::Simulation},
 };
 
-use cgmath::{Rotation3, Vector3, Zero};
+use cgmath::{Vector3, Zero};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -234,6 +234,7 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
         Some(springy_mesh::TorsionalSpringConfig::default()),
+        &None,
     );
     cube.add_strut(
         (1, 3),
@@ -282,6 +283,7 @@ fn get_springy_tri() -> springy_mesh::SpringyMesh {
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
         Some(springy_mesh::TorsionalSpringConfig::default()),
+        &None,
     )
 }
 
@@ -300,6 +302,7 @@ fn get_springy_quad() -> springy_mesh::SpringyMesh {
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
         Some(springy_mesh::TorsionalSpringConfig::default()),
+        &None,
     )
 }
 
@@ -318,6 +321,7 @@ fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
         springy_mesh::STRUT_STIFFNESS_DEFAULT,
         springy_mesh::STRUT_DAMPING_DEFAULT,
         Some(springy_mesh::TorsionalSpringConfig::default()),
+        &None,
     )
 }
 
