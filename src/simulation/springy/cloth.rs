@@ -11,10 +11,9 @@ pub struct Cloth {
 }
 
 impl Cloth {
-    // TODO This needs shear springs and binding springs to be added at a minimum.
     // TODO this can further be improved by allowing tensile and bending spring strength by weft and warp.
     // TODO this can be improved by passing in a point and a normal, and placing the mesh at that point, oriented towards that normal.
-    // TODO add shear and bending springs
+    // TODO We can further add a from_mesh() function to start the simulation from an arbitrary mesh.
     /// Construct a new cloth.
     /// rows and cols refer to the number of vertices, not quads/tris.
     /// Spring constants are for a strut of NOMINAL_STRUT_LENGTH.
