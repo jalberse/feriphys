@@ -69,6 +69,9 @@ impl Simulation {
         self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
         self.config.gravity = ui_config_state.gravity;
+        self.config.wind = ui_config_state.wind;
+        self.config.lift_coefficient = ui_config_state.lift_coefficient;
+        self.config.drag_coefficient = ui_config_state.drag_coefficient;
         self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
         self.config.coefficient_of_friction = ui_config_state.coefficient_of_friction;
     }

@@ -1,4 +1,4 @@
-use std::{pin, time::Duration};
+use std::{f32::consts::PI, pin, time::Duration};
 
 use crate::simulation::{consts, springy::obstacle, state::Stateful};
 
@@ -119,6 +119,13 @@ impl Face {
         let v2 = &points[self.vertex_indices.2].position;
         // TODO I think this is... not correct for calculating the surface normal?
         (v1 - v0).cross(v2 - v0).normalize()
+    }
+
+    fn area(&self, points: &Vec<Point>) -> f32 {
+        let v0 = &points[self.vertex_indices.0].position;
+        let v1 = &points[self.vertex_indices.1].position;
+        let v2 = &points[self.vertex_indices.2].position;
+        (v1 - v0).cross(v2 - v0).magnitude() / 2.0
     }
 
     /// Returns the vertex angle of vertex_indices.0
@@ -576,7 +583,7 @@ impl SpringyMesh {
         self.apply_strut_forces();
         // TODO unfortunately, torsional forces are broken, causing the mesh to explode. Try to fix them.
         // self.apply_torsional_forces();
-        self.apply_face_forces();
+        self.apply_face_forces(config);
 
         for pin_index in self.pinned_points.iter() {
             self.points[*pin_index].accumulated_force = Vector3::<f32>::zero();
@@ -684,11 +691,31 @@ impl SpringyMesh {
         }
     }
 
-    fn apply_face_forces(&mut self) {
-        // TODO loop over the faces, distributing any face forces to points (air resistance, etc).
-        //  We don't have any yet!
-        //  But I would quite like to add e.g. wind, for cloth simulation stuff.
-        //  This can be done after I implement collisions though.
+    fn apply_face_forces(&mut self, config: &Config) {
+        for face in self.faces.iter() {
+            let v0 = self.points[face.vertex_indices.0];
+            let v1 = self.points[face.vertex_indices.1];
+            let v2 = self.points[face.vertex_indices.2];
+            let average_vertex_velocity = (v0.velocity + v1.velocity + v2.velocity) / 3.0;
+            let relative_velocity = average_vertex_velocity - config.wind;
+            let effective_area =
+                face.area(&self.points) * face.normal(&self.points).dot(relative_velocity).abs();
+            let drag_force = -1.0 * config.drag_coefficient * effective_area * relative_velocity;
+            let lift_force = -1.0
+                * config.lift_coefficient
+                * effective_area
+                * (relative_velocity
+                    * face
+                        .normal(&self.points)
+                        .cross(relative_velocity)
+                        .magnitude());
+            let v0_force = face.vertex_angle_0(&self) / Rad(PI) * (drag_force + lift_force);
+            let v1_force = face.vertex_angle_1(&self) / Rad(PI) * (drag_force + lift_force);
+            let v2_force = face.vertex_angle_2(&self) / Rad(PI) * (drag_force + lift_force);
+            self.points[face.vertex_indices.0].accumulated_force += v0_force;
+            self.points[face.vertex_indices.1].accumulated_force += v1_force;
+            self.points[face.vertex_indices.2].accumulated_force += v2_force;
+        }
     }
 
     pub fn clear_forces(&mut self) {
