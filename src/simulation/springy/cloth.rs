@@ -25,6 +25,8 @@ impl Cloth {
         point_mass: f32,
         tensile_stiffness: f32,
         tensile_damping: f32,
+        binding_spring_stiffness: f32,
+        binding_spring_damping: f32,
         pinned_vertices: Vec<usize>,
     ) -> Cloth {
         let mut vertex_positions = Vec::new();
@@ -71,6 +73,13 @@ impl Cloth {
         }
         let indices = indices;
 
+        // TODO critically, the shear springs are already included here as the diagonals,
+        //      but they need to have their own (order of magnitude weaker) strength compared to the tensile springs.
+        //      That means we need SpringyMesh::new() to intelligently apply different parameters for these shear springs.
+        //      I think we might want to pass in a map between index pairs and spring cfgs.
+        //      That would let us override the default stiffness/damping for any entry in that map.
+        //      Then, here, we just need to add the diagonal index pairs to a set.
+
         let mut mesh = SpringyMesh::new(
             vertex_positions,
             indices,
@@ -81,6 +90,19 @@ impl Cloth {
         );
         for pin_index in pinned_vertices.iter() {
             mesh.add_pin(*pin_index)
+        }
+
+        // Binding springs resist bending of cloth as a whole.
+        let mut binding_spring_index_pairs = Vec::new();
+        for row in 0..(rows - 2) {
+            for col in 0..(cols - 2) {
+                let i = (row * cols) + col;
+                binding_spring_index_pairs.push((i, i + 2));
+                binding_spring_index_pairs.push((i, i + 2 * cols));
+            }
+        }
+        for pair in binding_spring_index_pairs.iter() {
+            mesh.add_strut(*pair, binding_spring_stiffness, binding_spring_damping);
         }
 
         Cloth { mesh }
