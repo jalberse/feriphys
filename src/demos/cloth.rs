@@ -51,7 +51,7 @@ impl State {
 
         let rows = 20 as usize;
         let cols = 20 as usize;
-        let tablecloth = Cloth::new(
+        let cloth = Cloth::new(
             rows,
             cols,
             0.1,
@@ -69,9 +69,9 @@ impl State {
                 (rows * cols) - (cols / 2),
             ],
         );
-        let tablecloth_mesh = tablecloth.mesh;
+        let cloth_mesh = cloth.mesh;
         let obstacles = get_obstacles();
-        let simulation = Simulation::new(vec![tablecloth_mesh], obstacles);
+        let simulation = Simulation::new(vec![cloth_mesh], obstacles);
 
         // Note we're keeping the scene around since we'll probably have some static obstacles that we'd like to draw
         // for the springy mesh to interact with.
