@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["spring-mass-damper"],
+            "args": ["cloth"],
             "cwd": "${workspaceFolder}"
         },
         {

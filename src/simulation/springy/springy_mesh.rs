@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{pin, time::Duration};
 
 use crate::simulation::{consts, springy::obstacle, state::Stateful};
 
@@ -245,6 +245,7 @@ pub struct SpringyMesh {
     struts: Vec<Strut>,
     faces: Vec<Face>,
     points: Vec<Point>,
+    pinned_points: Vec<usize>,
 }
 
 impl SpringyMesh {
@@ -370,6 +371,7 @@ impl SpringyMesh {
             struts,
             faces,
             points,
+            pinned_points: vec![],
         }
     }
 
@@ -383,6 +385,10 @@ impl SpringyMesh {
             (None, None),
             None,
         ));
+    }
+
+    pub fn add_pin(&mut self, pin_index: usize) {
+        self.pinned_points.push(pin_index);
     }
 
     pub fn get_points(&self) -> &Vec<Point> {
@@ -462,7 +468,12 @@ impl SpringyMesh {
         //   From there, the logic is equivalent - it's just the plane is moving instead of the position, but the logic is the same, it's all relative.
 
         // TODO then do edge-edge collisions (mesh's edge against environment edge)
+
+        let original_points = self.points.clone();
         self.points = new_points;
+        for pin_index in self.pinned_points.iter_mut() {
+            self.points[*pin_index] = original_points[*pin_index];
+        }
     }
 
     fn get_collided_face<'a>(
@@ -550,6 +561,10 @@ impl SpringyMesh {
         // TODO unfortunately, torsional forces are broken, causing the mesh to explode. Try to fix them.
         // self.apply_torsional_forces();
         self.apply_face_forces();
+
+        for pin_index in self.pinned_points.iter() {
+            self.points[*pin_index].accumulated_force = Vector3::<f32>::zero();
+        }
     }
 
     fn apply_external_point_forces(&mut self, config: &Config) {

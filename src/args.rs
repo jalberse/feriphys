@@ -6,6 +6,7 @@ pub enum Demos {
     ParticlesCpu,
     Flocking,
     SpringMassDamper,
+    Cloth,
 }
 
 #[derive(Parser)]

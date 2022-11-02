@@ -1,3 +1,4 @@
+pub mod cloth;
 pub mod config;
 pub mod obstacle;
 pub mod simulation;

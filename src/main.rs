@@ -15,5 +15,6 @@ fn main() {
         Demos::ParticlesCpu => demos::particles_cpu::run(),
         Demos::Flocking => demos::flocking::run(),
         Demos::SpringMassDamper => demos::spring_mass_damper::run(),
+        Demos::Cloth => demos::cloth::run(),
     }
 }
