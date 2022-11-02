@@ -1,4 +1,7 @@
 use wgpu::{CommandEncoder, RenderPass, TextureView};
+use winit::event::{ElementState, KeyboardInput, MouseButton, WindowEvent};
+
+use crate::graphics::camera::CameraBundle;
 
 pub fn begin_default_render_pass<'pass>(
     encoder: &'pass mut CommandEncoder,
@@ -34,4 +37,37 @@ pub fn begin_default_render_pass<'pass>(
             stencil_ops: None,
         }),
     })
+}
+
+pub fn handle_input_default(
+    event: &WindowEvent,
+    camera_bundle: &mut CameraBundle,
+    mouse_pressed_state: &mut bool,
+) -> bool {
+    match event {
+        WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    virtual_keycode: Some(key),
+                    state,
+                    ..
+                },
+            ..
+        } => camera_bundle
+            .camera_controller
+            .process_keyboard(*key, *state),
+        WindowEvent::MouseWheel { delta, .. } => {
+            camera_bundle.camera_controller.process_scroll(delta);
+            true
+        }
+        WindowEvent::MouseInput {
+            button: MouseButton::Left,
+            state,
+            ..
+        } => {
+            *mouse_pressed_state = *state == ElementState::Pressed;
+            true
+        }
+        _ => false,
+    }
 }
