@@ -117,7 +117,7 @@ impl State {
         let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances);
 
         // TODO handle rendering *all* obstacles in simulation
-        let obstacle_mesh = ColoredMesh::from_obstacle(
+        let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
             &self.simulation.get_obstacles()[0],

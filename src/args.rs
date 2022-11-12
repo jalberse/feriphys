@@ -7,6 +7,7 @@ pub enum Demos {
     Flocking,
     SpringMassDamper,
     Cloth,
+    RigidBody,
 }
 
 #[derive(Parser)]

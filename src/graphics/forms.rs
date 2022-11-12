@@ -138,6 +138,7 @@ pub fn generate_sphere(
     )
 }
 
+/// Returns the vertices and indices for a 1 x 1 x 1 cube centered around (0,0,0).
 pub fn get_cube_vertices() -> (Vec<Vector3<f32>>, Vec<usize>) {
     let vertex_positions = vec![
         // front
