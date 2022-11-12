@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, pin, time::Duration};
+use std::{f32::consts::PI, time::Duration};
 
 use crate::simulation::{
     consts, position::Position, springy::collidable_mesh, state::Stateful, velocity::Velocity,
