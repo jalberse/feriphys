@@ -6,7 +6,7 @@ use crate::{
     },
     gui,
     simulation::springy::springy_mesh::{self, SpringyMesh},
-    simulation::springy::{obstacle::Obstacle, simulation::Simulation},
+    simulation::springy::{collidable_mesh::CollidableMesh, simulation::Simulation},
 };
 
 use cgmath::{Vector3, Zero};
@@ -325,7 +325,7 @@ fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
     )
 }
 
-fn get_obstacles() -> Vec<Obstacle> {
+fn get_obstacles() -> Vec<CollidableMesh> {
     let vertex_positions = vec![
         -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
         Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
@@ -333,5 +333,5 @@ fn get_obstacles() -> Vec<Obstacle> {
         -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
-    vec![Obstacle::new(vertex_positions, indices)]
+    vec![CollidableMesh::new(vertex_positions, indices)]
 }

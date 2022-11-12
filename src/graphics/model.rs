@@ -1,5 +1,5 @@
 use crate::{
-    graphics::texture, simulation::springy::obstacle,
+    graphics::texture, simulation::springy::collidable_mesh,
     simulation::springy::springy_mesh::SpringyMesh,
 };
 
@@ -92,7 +92,7 @@ impl ColoredMesh {
     pub fn from_obstacle(
         device: &wgpu::Device,
         name: String,
-        springy_mesh: &obstacle::Obstacle,
+        springy_mesh: &collidable_mesh::CollidableMesh,
         color: [f32; 3],
     ) -> ColoredMesh {
         // TODO get_vertices() can be made into a Trait so this fn can be generalized with from_springy_mesh

@@ -4,18 +4,18 @@ use crate::gui;
 use crate::simulation::state::Integration;
 
 use super::super::state::State;
-use super::obstacle::Obstacle;
+use super::collidable_mesh::CollidableMesh;
 use super::{config::Config, springy_mesh::SpringyMesh};
 
 pub struct Simulation {
     config: Config,
     // Deformable springy meshes
     meshes: Vec<SpringyMesh>,
-    obstacles: Vec<Obstacle>,
+    obstacles: Vec<CollidableMesh>,
 }
 
 impl Simulation {
-    pub fn new(meshes: Vec<SpringyMesh>, obstacles: Vec<Obstacle>) -> Simulation {
+    pub fn new(meshes: Vec<SpringyMesh>, obstacles: Vec<CollidableMesh>) -> Simulation {
         let config = Config::default();
         Simulation {
             config,
@@ -52,7 +52,7 @@ impl Simulation {
         &self.meshes
     }
 
-    pub fn get_obstacles(&self) -> &Vec<Obstacle> {
+    pub fn get_obstacles(&self) -> &Vec<CollidableMesh> {
         &self.obstacles
     }
 
