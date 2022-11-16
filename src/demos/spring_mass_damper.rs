@@ -269,6 +269,7 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
     cube
 }
 
+#[allow(dead_code)]
 fn get_springy_tri() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),
@@ -287,6 +288,7 @@ fn get_springy_tri() -> springy_mesh::SpringyMesh {
     )
 }
 
+#[allow(dead_code)]
 fn get_springy_quad() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),
@@ -306,6 +308,7 @@ fn get_springy_quad() -> springy_mesh::SpringyMesh {
     )
 }
 
+#[allow(dead_code)]
 fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),

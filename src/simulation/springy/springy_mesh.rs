@@ -110,6 +110,7 @@ impl StrutKey {
 /// A face of a SpringyMesh
 struct Face {
     /// The indices of the struts comprising this Face's edges in the SpringyMesh
+    #[allow(dead_code)]
     strut_indices: (usize, usize, usize),
     vertex_indices: (usize, usize, usize),
 }
@@ -443,17 +444,6 @@ impl SpringyMesh {
             .map(|o| o.get_faces())
             .flatten()
             .collect_vec();
-        let obstacle_edges = obstacles
-            .iter()
-            .map(|o| o.get_edges())
-            .flatten()
-            .collect_vec();
-        let obstacle_vertices = obstacles
-            .iter()
-            .map(|o| o.get_vertices())
-            .flatten()
-            .collect_vec();
-
         // TODO collision detection can be more efficient with bounding box checks.
 
         // Vertex-Face collisions
@@ -567,6 +557,7 @@ impl SpringyMesh {
         });
     }
 
+    #[allow(dead_code)]
     fn apply_torsional_forces(&mut self) {
         let mut vertex_forces: FxHashMap<usize, Vector3<f32>> = FxHashMap::default();
         self.struts.iter().for_each(|strut| {

@@ -6,6 +6,7 @@ use itertools::Itertools;
 use crate::simulation::{position::Position, velocity::Velocity};
 
 pub struct Vertex {
+    #[allow(dead_code)]
     position: Vector3<f32>,
 }
 
@@ -54,7 +55,7 @@ impl CollidableMesh {
     pub fn new(vertex_positions: Vec<Vector3<f32>>, vertex_indices: Vec<usize>) -> CollidableMesh {
         let vertices = vertex_positions
             .iter()
-            .map(|v| Vertex { position: *v })
+            .map(|v| Vertex::new(*v))
             .collect_vec();
 
         let mut edges_set = BTreeSet::default();
@@ -78,10 +79,10 @@ impl CollidableMesh {
         let edges = edges_set.iter().fold(Vec::new(), |mut array, x| {
             let verts_indices = x.iter().collect_vec();
 
-            array.push(Edge {
-                v0: vertex_positions[**verts_indices[0]],
-                v1: vertex_positions[**verts_indices[1]],
-            });
+            array.push(Edge::new(
+                vertex_positions[**verts_indices[0]],
+                vertex_positions[**verts_indices[1]],
+            ));
             array
         });
 
@@ -181,10 +182,12 @@ impl CollidableMesh {
         (vertex_positions, vertex_indices.collect_vec())
     }
 
+    #[allow(dead_code)]
     pub fn get_vertices(&self) -> &Vec<Vertex> {
         &self.vertices
     }
 
+    #[allow(dead_code)]
     pub fn get_edges(&self) -> &Vec<Edge> {
         &self.edges
     }
