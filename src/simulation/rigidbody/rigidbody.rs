@@ -76,12 +76,9 @@ impl Stateful for State {
     }
 
     fn derivative(&self) -> Vec<f32> {
-        // Position derivative is the vecocity, which we derive from the linear momentum
+        // Position derivative is the velocity, which we derive from the linear momentum
         let position_derivative = 1.0 / self.mass * self.linear_momentum;
 
-        // TODO the next thing to test would be that we can work with a constant angular velocity, to see if we can get a cube that
-        //   spins in the proper direction according to the angular velocity.
-        // TODO then, I guess we can check storing that as the angular momentum to test the conversion down to angular velocity?
         let rotation_matrix = Matrix3::<f32>::from(self.rotation);
         let current_moment_inertia_inverted = rotation_matrix
             * self.initial_moment_of_intertia_inverted
@@ -105,7 +102,7 @@ impl Stateful for State {
             // Angular momentum derivative is torque
             self.accumulated_torque.x,
             self.accumulated_torque.y,
-            self.accumulated_torque.x,
+            self.accumulated_torque.z,
             // The remaining elements of the state are constant
             // TODO I'd really like to remove the need for this, but the need to convert back to this Struct representation from
             //   the state vector (state::State::from_state_vector()), means we need to associate this constant data stored in the state alongside
@@ -236,7 +233,9 @@ impl RigidBody {
         self.state.accumulated_force += config.gravity;
     }
 
-    pub fn accumulate_torques(&mut self, config: &Config) {}
+    pub fn accumulate_torques(&mut self, config: &Config) {
+        self.state.accumulated_torque += config.torque;
+    }
 
     pub fn clear_forces(&mut self) {
         self.state.accumulated_force = Vector3::<f32>::zero();

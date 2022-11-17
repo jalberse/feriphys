@@ -50,6 +50,27 @@ impl Ui for RigidBodyUi {
                 )
                 .text("Gravity Z"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.torque.x,
+                    RigidBodyUi::TORQUE_MIN..=RigidBodyUi::TORQUE_MAX,
+                )
+                .text("Torque X"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.torque.y,
+                    RigidBodyUi::TORQUE_MIN..=RigidBodyUi::TORQUE_MAX,
+                )
+                .text("Torque Y"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.torque.z,
+                    RigidBodyUi::TORQUE_MIN..=RigidBodyUi::TORQUE_MAX,
+                )
+                .text("Torque Z"),
+            );
         });
     }
 }
@@ -60,6 +81,9 @@ impl RigidBodyUi {
 
     const GRAVITY_MIN: f32 = -20.0;
     const GRAVITY_MAX: f32 = 20.0;
+
+    const TORQUE_MIN: f32 = -1.0;
+    const TORQUE_MAX: f32 = 1.0;
 
     pub fn new() -> RigidBodyUi {
         RigidBodyUi {

@@ -65,5 +65,6 @@ impl Simulation {
         self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
         self.config.gravity = ui_config_state.gravity;
+        self.config.torque = ui_config_state.torque;
     }
 }
