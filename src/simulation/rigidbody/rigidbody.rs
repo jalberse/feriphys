@@ -256,4 +256,16 @@ impl RigidBody {
     pub fn get_mesh(&self) -> &CollidableMesh {
         &self.mesh
     }
+
+    // TODO I think to test this, we should have a GUI container to specify the impulse and position,
+    //         and when a button is pressed, we call this function in something similar to the sync_from_gui function.
+    //         (but a separate one, since it's not just syncing the configs, it's a separate field of the UI)
+    //      Thanks to immediate mode, that should just be checking .clicked() on that button, and grabbing the current values
+    //         of fields in that block and then calling this function. ez peezy. Try wrapping it in some impulse container.
+    /// Applies the impulse, updating the linear and angular momentum.
+    /// The position describes the vector from the center of mass to the point that the impulse is applied.
+    pub fn apply_impulse(&mut self, impulse: Vector3<f32>, position: Vector3<f32>) {
+        self.state.linear_momentum += impulse;
+        self.state.angular_momentum += position.cross(impulse);
+    }
 }

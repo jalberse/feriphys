@@ -2,10 +2,14 @@ use crate::gui::Ui;
 use crate::simulation::rigidbody::config::Config;
 use crate::simulation::state::Integration;
 
+use cgmath::{Vector3, Zero};
 use egui::Slider;
 
 pub struct RigidBodyUi {
     sim_config: Config,
+    impulse: Vector3<f32>,
+    impulse_position: Vector3<f32>,
+    free_impulse: bool,
 }
 
 impl Ui for RigidBodyUi {
@@ -71,6 +75,51 @@ impl Ui for RigidBodyUi {
                 )
                 .text("Torque Z"),
             );
+            ui.separator();
+            ui.add(
+                Slider::new(
+                    &mut self.impulse.x,
+                    RigidBodyUi::IMPULSE_MIN..=RigidBodyUi::IMPULSE_MAX,
+                )
+                .text("Impulse X"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.impulse.y,
+                    RigidBodyUi::IMPULSE_MIN..=RigidBodyUi::IMPULSE_MAX,
+                )
+                .text("Impulse Y"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.impulse.z,
+                    RigidBodyUi::IMPULSE_MIN..=RigidBodyUi::IMPULSE_MAX,
+                )
+                .text("Impulse Z"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.impulse_position.x,
+                    RigidBodyUi::IMPULSE_POSITION_MIN..=RigidBodyUi::IMPULSE_POSITION_MAX,
+                )
+                .text("Impulse Position X"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.impulse_position.y,
+                    RigidBodyUi::IMPULSE_POSITION_MIN..=RigidBodyUi::IMPULSE_POSITION_MAX,
+                )
+                .text("Impulse Position Y"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.impulse_position.z,
+                    RigidBodyUi::IMPULSE_POSITION_MIN..=RigidBodyUi::IMPULSE_POSITION_MAX,
+                )
+                .text("Impulse Position Z"),
+            );
+            self.free_impulse = ui.button("Free Impulse").clicked();
+            ui.separator();
         });
     }
 }
@@ -85,13 +134,33 @@ impl RigidBodyUi {
     const TORQUE_MIN: f32 = -1.0;
     const TORQUE_MAX: f32 = 1.0;
 
+    const IMPULSE_MIN: f32 = -1.0;
+    const IMPULSE_MAX: f32 = 1.0;
+
+    const IMPULSE_POSITION_MIN: f32 = -0.5;
+    const IMPULSE_POSITION_MAX: f32 = 0.5;
+
     pub fn new() -> RigidBodyUi {
         RigidBodyUi {
             sim_config: Config::default(),
+            impulse: Vector3::zero(),
+            impulse_position: Vector3::zero(),
+            free_impulse: false,
         }
     }
 
     pub fn get_gui_state_mut(&mut self) -> &Config {
         &self.sim_config
+    }
+
+    /// Returns None if we should not impart a free impulse this frame.
+    /// Returns Some pair of vectors for the impulse and impulse position if the user
+    /// has clicked to impart a free impulse
+    pub fn get_free_impulse(&self) -> Option<(Vector3<f32>, Vector3<f32>)> {
+        if self.free_impulse {
+            Some((self.impulse, self.impulse_position))
+        } else {
+            None
+        }
     }
 }

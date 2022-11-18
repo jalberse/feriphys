@@ -60,11 +60,15 @@ impl Simulation {
         &self.rigidbodies
     }
 
-    pub fn sync_sim_config_from_ui(&mut self, ui: &mut crate::gui::rigidbody::RigidBodyUi) {
+    pub fn sync_sim_from_ui(&mut self, ui: &mut crate::gui::rigidbody::RigidBodyUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
         self.config.gravity = ui_config_state.gravity;
         self.config.torque = ui_config_state.torque;
+
+        if let Some((impulse, impulse_position)) = ui.get_free_impulse() {
+            self.rigidbodies[0].apply_impulse(impulse, impulse_position);
+        }
     }
 }

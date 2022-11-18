@@ -157,7 +157,7 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                state.simulation.sync_sim_config_from_ui(&mut ui);
+                state.simulation.sync_sim_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
                 let gui_render_command_buffer = gui.render(
