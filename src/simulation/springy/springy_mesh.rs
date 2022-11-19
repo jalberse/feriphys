@@ -434,13 +434,12 @@ impl SpringyMesh {
 
         // Vertex-Face collisions
         for (new_point, old_point) in new_points.iter_mut().zip(&self.points) {
-            let collided_face_maybe = CollidableMesh::get_collided_face_from_list(
+            if let Some(face) = CollidableMesh::get_collided_face_from_list(
                 &obstacle_faces,
                 old_point.position,
                 new_point.position,
                 Duration::from_secs_f32(config.dt),
-            );
-            if let Some(face) = collided_face_maybe {
+            ) {
                 let old_distance_to_plane = face.distance_from_plane(&old_point.position);
                 let new_distance_to_plane = face.distance_from_plane(&new_point.position);
 
