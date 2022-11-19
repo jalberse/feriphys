@@ -136,8 +136,8 @@ impl RigidBodyUi {
     const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
     const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
 
-    const GRAVITY_MIN: f32 = -20.0;
-    const GRAVITY_MAX: f32 = 20.0;
+    const GRAVITY_MIN: f32 = -2.0;
+    const GRAVITY_MAX: f32 = 2.0;
 
     const COEFFICIENT_OF_RESTITUTION_MIN: f32 = 0.0;
     const COEFFICIENT_OF_RESTITUTION_MAX: f32 = 1.0;
