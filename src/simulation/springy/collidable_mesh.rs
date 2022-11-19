@@ -3,8 +3,13 @@ use std::{collections::BTreeSet, time::Duration};
 use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;
 pub struct Vertex {
-    #[allow(dead_code)]
     position: Vector3<f32>,
+}
+
+impl Vertex {
+    pub fn position(&self) -> Vector3<f32> {
+        self.position
+    }
 }
 
 impl Vertex {
@@ -177,7 +182,6 @@ impl CollidableMesh {
         (vertex_positions, vertex_indices.collect_vec())
     }
 
-    #[allow(dead_code)]
     pub fn get_vertices(&self) -> &Vec<Vertex> {
         &self.vertices
     }

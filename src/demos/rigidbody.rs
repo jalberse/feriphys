@@ -5,7 +5,10 @@ use crate::{
         instance::Instance, light, model::ColoredMesh, scene::Scene, texture,
     },
     gui,
-    simulation::rigidbody::{rigidbody::RigidBody, simulation::Simulation},
+    simulation::{
+        rigidbody::{rigidbody::RigidBody, simulation::Simulation},
+        springy::collidable_mesh::CollidableMesh,
+    },
 };
 
 use cgmath::Vector3;
@@ -50,7 +53,8 @@ impl State {
 
         let rigidbody =
             RigidBody::new(Vector3::<f32>::new(0.0, 0.0, 0.0), 1.0).expect("Non-invertible!");
-        let simulation = Simulation::new(vec![rigidbody], vec![]);
+        let obstacles = get_obstacles();
+        let simulation = Simulation::new(vec![rigidbody], obstacles);
 
         // Note we're keeping the scene around since we'll probably have some static obstacles that we'd like to draw
         // for the springy mesh to interact with.
@@ -115,6 +119,15 @@ impl State {
         let rigidbody_entity =
             ColoredMeshEntity::new(&self.gpu, rigidbody_mesh, rigidbody_instances);
 
+        let obstacle_mesh = ColoredMesh::from_collidable_mesh(
+            &self.gpu.device,
+            "floor".to_string(),
+            &self.simulation.get_obstacles()[0],
+            [0.1, 0.9, 0.1],
+        );
+        let obstacle_instances = vec![Instance::default()];
+        let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
+
         {
             let mut render_pass =
                 utils::begin_default_render_pass(&mut encoder, &view, &self.depth_texture.view);
@@ -130,6 +143,11 @@ impl State {
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );
+            obstacle_entity.draw(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            )
         }
 
         encoder.finish()
@@ -207,4 +225,15 @@ pub fn run() {
             _ => {}
         }
     });
+}
+
+fn get_obstacles() -> Vec<CollidableMesh> {
+    let vertex_positions = vec![
+        -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+        -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
+    ];
+    let indices = vec![0, 1, 2, 0, 2, 3];
+    vec![CollidableMesh::new(vertex_positions, indices)]
 }

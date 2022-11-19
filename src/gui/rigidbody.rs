@@ -56,6 +56,14 @@ impl Ui for RigidBodyUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.coefficient_of_restitution,
+                    RigidBodyUi::COEFFICIENT_OF_RESTITUTION_MIN
+                        ..=RigidBodyUi::COEFFICIENT_OF_RESTITUTION_MAX,
+                )
+                .text("Coefficient of Restitution"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.torque.x,
                     RigidBodyUi::TORQUE_MIN..=RigidBodyUi::TORQUE_MAX,
                 )
@@ -130,6 +138,9 @@ impl RigidBodyUi {
 
     const GRAVITY_MIN: f32 = -20.0;
     const GRAVITY_MAX: f32 = 20.0;
+
+    const COEFFICIENT_OF_RESTITUTION_MIN: f32 = 0.0;
+    const COEFFICIENT_OF_RESTITUTION_MAX: f32 = 1.0;
 
     const TORQUE_MIN: f32 = -1.0;
     const TORQUE_MAX: f32 = 1.0;

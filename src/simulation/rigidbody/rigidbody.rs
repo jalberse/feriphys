@@ -1,6 +1,13 @@
-use cgmath::{InnerSpace, Matrix, Matrix3, One, Quaternion, SquareMatrix, Vector3, Zero};
+use std::time::Duration;
 
-use crate::simulation::{springy::collidable_mesh::CollidableMesh, state::Stateful};
+use cgmath::{InnerSpace, Matrix, Matrix3, One, Quaternion, SquareMatrix, Vector3, Zero};
+use itertools::Itertools;
+
+use crate::simulation::{
+    consts,
+    springy::collidable_mesh::{self, CollidableMesh},
+    state::Stateful,
+};
 
 use super::config::Config;
 
@@ -22,6 +29,24 @@ pub struct State {
 impl State {
     pub fn normalize_rotation(&mut self) {
         self.rotation = self.rotation.normalize();
+    }
+
+    pub fn get_moment_of_inertia_inverted(&self) -> Matrix3<f32> {
+        let rotation_matrix = Matrix3::<f32>::from(self.rotation);
+        rotation_matrix * self.initial_moment_of_intertia_inverted * rotation_matrix.transpose()
+    }
+
+    pub fn apply_impulse(&mut self, impulse: Vector3<f32>, position: Vector3<f32>) {
+        self.linear_momentum += impulse;
+        self.angular_momentum += position.cross(impulse);
+    }
+
+    pub fn velocity(&self) -> Vector3<f32> {
+        self.linear_momentum / self.mass
+    }
+
+    pub fn angular_velocity(&self) -> Vector3<f32> {
+        self.get_moment_of_inertia_inverted() * self.angular_momentum
     }
 }
 
@@ -76,16 +101,9 @@ impl Stateful for State {
     }
 
     fn derivative(&self) -> Vec<f32> {
-        // Position derivative is the velocity, which we derive from the linear momentum
-        let position_derivative = 1.0 / self.mass * self.linear_momentum;
-
-        let rotation_matrix = Matrix3::<f32>::from(self.rotation);
-        let current_moment_inertia_inverted = rotation_matrix
-            * self.initial_moment_of_intertia_inverted
-            * rotation_matrix.transpose();
-        let angular_velocity = current_moment_inertia_inverted * self.angular_momentum;
-
-        let rotation_derivative = 0.5 * Quaternion::from_sv(0.0, angular_velocity) * self.rotation;
+        let position_derivative = self.velocity();
+        let rotation_derivative =
+            0.5 * Quaternion::from_sv(0.0, self.angular_velocity()) * self.rotation;
 
         let derivative_state = vec![
             position_derivative.x,
@@ -224,7 +242,78 @@ impl RigidBody {
         &self.state
     }
 
-    pub fn update_state(&mut self, new_state: State) {
+    pub fn update_state(
+        &mut self,
+        mut new_state: State,
+        obstacles: &Vec<collidable_mesh::CollidableMesh>,
+        config: &Config,
+    ) {
+        // The new state might need to be modified if there is a collision.
+        //   For now, we are just going to pass in static obstacles, so we don't need to get obstacles from a rigidbody or whatever, that's good.
+        //   We will need to use the new state's pos and rot to get new positions for verts to test etc.
+        let obstacle_faces = obstacles
+            .iter()
+            .map(|o| o.get_faces())
+            .flatten()
+            .collect_vec();
+
+        // Handle collisions between this rigidbody's vertices, and the world's faces.
+
+        let vertices_old_world_positions = self
+            .mesh
+            .get_vertices()
+            .to_owned()
+            .iter()
+            .map(|v| self.get_rotation_matrix() * v.position() + self.get_position())
+            .collect_vec();
+        let vertices_new_world_positions = self
+            .mesh
+            .get_vertices()
+            .to_owned()
+            .iter()
+            .map(|v| Matrix3::<f32>::from(new_state.rotation) * v.position() + new_state.position)
+            .collect_vec();
+        for (new_point, old_point) in vertices_new_world_positions
+            .iter()
+            .zip(vertices_old_world_positions.iter())
+        {
+            if let Some(face) = CollidableMesh::get_collided_face_from_list(
+                &obstacle_faces,
+                *old_point,
+                *new_point,
+                Duration::from_secs_f32(config.dt),
+            ) {
+                let old_distance_to_plane = face.distance_from_plane(&old_point);
+                let new_distance_to_plane = face.distance_from_plane(&new_point);
+                let r = old_point - self.state.position;
+
+                let fraction_timestep =
+                    old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
+                let collision_velocity =
+                    self.state.velocity() + self.state.angular_velocity().cross(r);
+                let collision_point =
+                    old_point + config.dt * fraction_timestep * collision_velocity;
+
+                // The normal component of the velocity before the collision
+                let normal_velocity = collision_velocity.dot(face.normal());
+
+                let impulse_magnitude = (-(1.0 + config.coefficient_of_restitution)
+                    * normal_velocity)
+                    / (1.0 / self.state.mass
+                        + face.normal().dot(
+                            self.state.get_moment_of_inertia_inverted()
+                                * r.cross(face.normal()).cross(r),
+                        ));
+                let impulse = impulse_magnitude * face.normal();
+
+                new_state.position = collision_point - r + consts::EPSILON * face.normal();
+                new_state.apply_impulse(impulse, r);
+            }
+        }
+
+        // TODO this can further be improved by handling edge-edge collision, and
+        //  by handling collisions between the world's vertices and this rigidbody's faces.
+
         self.state = new_state;
     }
 
@@ -257,15 +346,9 @@ impl RigidBody {
         &self.mesh
     }
 
-    // TODO I think to test this, we should have a GUI container to specify the impulse and position,
-    //         and when a button is pressed, we call this function in something similar to the sync_from_gui function.
-    //         (but a separate one, since it's not just syncing the configs, it's a separate field of the UI)
-    //      Thanks to immediate mode, that should just be checking .clicked() on that button, and grabbing the current values
-    //         of fields in that block and then calling this function. ez peezy. Try wrapping it in some impulse container.
     /// Applies the impulse, updating the linear and angular momentum.
     /// The position describes the vector from the center of mass to the point that the impulse is applied.
     pub fn apply_impulse(&mut self, impulse: Vector3<f32>, position: Vector3<f32>) {
-        self.state.linear_momentum += impulse;
-        self.state.angular_momentum += position.cross(impulse);
+        self.state.apply_impulse(impulse, position);
     }
 }

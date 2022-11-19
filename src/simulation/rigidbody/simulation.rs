@@ -36,8 +36,7 @@ impl Simulation {
             let mut new_rigidbody_state = new_state.get_elements()[0];
             new_rigidbody_state.normalize_rotation();
 
-            // TODO The logic to update with the new state should include collision handling (resulting in an impulse on the rigidbody).
-            rigidbody.update_state(new_rigidbody_state);
+            rigidbody.update_state(new_rigidbody_state, &self.obstacles, &self.config);
 
             // TODO The collision response should also handle other rigidbodies, which would require examining and updating all rigidbodies at once,
             //        rather than sequentially as here. Really, we should have all rigidbodies in a single State vector, and handle derivative calculation etc from
@@ -60,10 +59,15 @@ impl Simulation {
         &self.rigidbodies
     }
 
+    pub fn get_obstacles(&self) -> &Vec<CollidableMesh> {
+        &self.obstacles
+    }
+
     pub fn sync_sim_from_ui(&mut self, ui: &mut crate::gui::rigidbody::RigidBodyUi) {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
+        self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
         self.config.gravity = ui_config_state.gravity;
         self.config.torque = ui_config_state.torque;
 
