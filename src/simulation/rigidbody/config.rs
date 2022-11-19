@@ -17,7 +17,7 @@ impl Default for Config {
         Self {
             integration: Integration::Rk4,
             dt: Duration::from_millis(1).as_secs_f32(),
-            coefficient_of_restitution: 1.0,
+            coefficient_of_restitution: 0.7,
             gravity: Vector3::<f32>::zero(),
             torque: Vector3::<f32>::zero(),
         }
