@@ -1,8 +1,6 @@
 use std::{f32::consts::PI, time::Duration};
 
-use crate::simulation::{
-    consts, position::Position, springy::collidable_mesh, state::Stateful, velocity::Velocity,
-};
+use crate::simulation::{consts, springy::collidable_mesh, state::Stateful};
 
 use super::{collidable_mesh::CollidableMesh, config::Config};
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
@@ -180,18 +178,6 @@ pub struct Point {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
     accumulated_force: Vector3<f32>,
-}
-
-impl Position for Point {
-    fn position(&self) -> Vector3<f32> {
-        self.position
-    }
-}
-
-impl Velocity for Point {
-    fn velocity(&self) -> Vector3<f32> {
-        self.velocity
-    }
 }
 
 impl Point {
@@ -450,8 +436,8 @@ impl SpringyMesh {
         for (new_point, old_point) in new_points.iter_mut().zip(&self.points) {
             let collided_face_maybe = CollidableMesh::get_collided_face_from_list(
                 &obstacle_faces,
-                old_point,
-                new_point,
+                old_point.position,
+                new_point.position,
                 Duration::from_secs_f32(config.dt),
             );
             if let Some(face) = collided_face_maybe {

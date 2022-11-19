@@ -2,9 +2,6 @@ use std::{collections::BTreeSet, time::Duration};
 
 use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;
-
-use crate::simulation::{position::Position, velocity::Velocity};
-
 pub struct Vertex {
     #[allow(dead_code)]
     position: Vector3<f32>,
@@ -102,16 +99,14 @@ impl CollidableMesh {
         }
     }
 
-    pub fn get_collided_face_from_list<'a, T: Position + Velocity>(
+    pub fn get_collided_face_from_list<'a>(
         faces: &'a Vec<&Face>,
-        old_point: &T,
-        new_point: &T,
+        old_position: Vector3<f32>,
+        new_position: Vector3<f32>,
         dt: Duration,
     ) -> Option<&'a Face> {
         let result = faces.iter().find(|face| -> bool {
-            let old_position = old_point.position();
-            let old_velocity = old_point.velocity();
-            let new_position = new_point.position();
+            let old_velocity = (new_position - old_position) / dt.as_secs_f32();
 
             let old_distance_to_plane = face.distance_from_plane(&old_position);
             let new_distance_to_plane = face.distance_from_plane(&new_position);
