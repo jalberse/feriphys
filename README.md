@@ -34,6 +34,10 @@ Flocking is implemented for simulating the motion of coordinated groups of boids
 
 CPU-bound particle simulation is available.
 
+## Rigid Body Simulation (limited)
+
+The library contains a very limited implementation of rigid body dynamics.
+
 ## Extensible State Representation
 
 The State module provides numerical integration for arbitrary stateful representations of physical systems. Users can make use of it for any type they create by implementing the Stateful trait for that type. See the State tests module for examples.
