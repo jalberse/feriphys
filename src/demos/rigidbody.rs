@@ -5,11 +5,14 @@ use crate::{
         instance::Instance, light, model::ColoredMesh, scene::Scene, texture,
     },
     gui,
-    simulation::springy::cloth::Cloth,
-    simulation::springy::{collidable_mesh::CollidableMesh, simulation::Simulation},
+    simulation::{
+        rigidbody::{rigidbody::RigidBody, simulation::Simulation},
+        springy::collidable_mesh::CollidableMesh,
+    },
 };
 
-use cgmath::{Vector3, Zero};
+use cgmath::Vector3;
+use itertools::Itertools;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -49,29 +52,10 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let rows = 20 as usize;
-        let cols = 20 as usize;
-        let cloth = Cloth::new(
-            rows,
-            cols,
-            0.1,
-            Vector3::<f32>::zero(),
-            10.0,
-            2000.0,
-            200.0,
-            500.0,
-            20.0,
-            5.0,
-            2.0,
-            vec![
-                rows * cols - 1,
-                (rows * cols) - cols,
-                (rows * cols) - (cols / 2),
-            ],
-        );
-        let cloth_mesh = cloth.mesh;
+        let rigidbody =
+            RigidBody::new(Vector3::<f32>::new(0.0, 0.0, 0.0), 1.0).expect("Non-invertible!");
         let obstacles = get_obstacles();
-        let simulation = Simulation::new(vec![cloth_mesh], obstacles);
+        let simulation = Simulation::new(vec![rigidbody], obstacles);
 
         // Note we're keeping the scene around since we'll probably have some static obstacles that we'd like to draw
         // for the springy mesh to interact with.
@@ -126,17 +110,16 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-        // TODO handle rendering *all* springy meshes in simulation
-        let cube_mesh = ColoredMesh::from_springy_mesh(
+        let rigidbody_mesh = ColoredMesh::from_rigidbody(
             &self.gpu.device,
             "springy cube".to_string(),
-            &self.simulation.get_meshes()[0],
+            &self.simulation.get_rigidbodies()[0],
             [0.9, 0.1, 0.1],
         );
-        let cube_instances = vec![Instance::default()];
-        let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances);
+        let rigidbody_instances = vec![Instance::default()];
+        let rigidbody_entity =
+            ColoredMeshEntity::new(&self.gpu, rigidbody_mesh, rigidbody_instances);
 
-        // TODO handle rendering *all* obstacles in simulation
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
@@ -156,7 +139,7 @@ impl State {
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );
-            cube_entity.draw(
+            rigidbody_entity.draw(
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
@@ -165,7 +148,7 @@ impl State {
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
-            );
+            )
         }
 
         encoder.finish()
@@ -180,7 +163,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut ui = gui::spring_mass_damper::SpringMassDamperUi::new();
+    let mut ui = gui::rigidbody::RigidBodyUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -193,7 +176,7 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                state.simulation.sync_sim_config_from_ui(&mut ui);
+                state.simulation.sync_sim_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
                 let gui_render_command_buffer = gui.render(
@@ -246,12 +229,7 @@ pub fn run() {
 }
 
 fn get_obstacles() -> Vec<CollidableMesh> {
-    let vertex_positions = vec![
-        -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
+    let vertex_positions = vertex_positions.iter().map(|v| v * 2.0).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
 }

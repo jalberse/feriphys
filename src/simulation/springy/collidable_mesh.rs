@@ -1,10 +1,15 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, time::Duration};
 
 use cgmath::{InnerSpace, Vector3};
 use itertools::Itertools;
-
 pub struct Vertex {
     position: Vector3<f32>,
+}
+
+impl Vertex {
+    pub fn position(&self) -> Vector3<f32> {
+        self.position
+    }
 }
 
 impl Vertex {
@@ -42,17 +47,17 @@ impl Face {
     }
 }
 
-pub struct Obstacle {
+pub struct CollidableMesh {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     faces: Vec<Face>,
 }
 
-impl Obstacle {
-    pub fn new(vertex_positions: Vec<Vector3<f32>>, vertex_indices: Vec<usize>) -> Obstacle {
+impl CollidableMesh {
+    pub fn new(vertex_positions: Vec<Vector3<f32>>, vertex_indices: Vec<usize>) -> CollidableMesh {
         let vertices = vertex_positions
             .iter()
-            .map(|v| Vertex { position: *v })
+            .map(|v| Vertex::new(*v))
             .collect_vec();
 
         let mut edges_set = BTreeSet::default();
@@ -76,10 +81,10 @@ impl Obstacle {
         let edges = edges_set.iter().fold(Vec::new(), |mut array, x| {
             let verts_indices = x.iter().collect_vec();
 
-            array.push(Edge {
-                v0: vertex_positions[**verts_indices[0]],
-                v1: vertex_positions[**verts_indices[1]],
-            });
+            array.push(Edge::new(
+                vertex_positions[**verts_indices[0]],
+                vertex_positions[**verts_indices[1]],
+            ));
             array
         });
 
@@ -92,10 +97,74 @@ impl Obstacle {
             });
         }
 
-        Obstacle {
+        CollidableMesh {
             vertices,
             edges,
             faces,
+        }
+    }
+
+    pub fn get_collided_face_from_list<'a>(
+        faces: &'a Vec<&Face>,
+        old_position: Vector3<f32>,
+        new_position: Vector3<f32>,
+        dt: Duration,
+    ) -> Option<&'a Face> {
+        let result = faces.iter().find(|face| -> bool {
+            let old_velocity = (new_position - old_position) / dt.as_secs_f32();
+
+            let old_distance_to_plane = face.distance_from_plane(&old_position);
+            let new_distance_to_plane = face.distance_from_plane(&new_position);
+
+            let crossed_plane = old_distance_to_plane.is_sign_positive()
+                != new_distance_to_plane.is_sign_positive();
+
+            if !crossed_plane {
+                return false;
+            }
+            // Get the point in the plane of the tri
+            let fraction_timestep =
+                old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
+            let collision_point =
+                old_position + dt.as_secs_f32() * fraction_timestep * old_velocity;
+            let face_normal = face.normal();
+            // Flatten the tri and the point into 2D to check containment.
+            let (v0_flat, v1_flat, v2_flat, point_flat) =
+                if face_normal.x >= face_normal.y && face_normal.x >= face_normal.z {
+                    // Eliminate the x component of all the elements
+                    let v0_flat = Vector3::<f32>::new(0.0, face.v0.y, face.v0.z);
+                    let v1_flat = Vector3::<f32>::new(0.0, face.v1.y, face.v1.z);
+                    let v2_flat = Vector3::<f32>::new(0.0, face.v2.y, face.v2.z);
+                    let point_flat = Vector3::<f32>::new(0.0, collision_point.y, collision_point.z);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                } else if face_normal.y >= face_normal.x && face_normal.y >= face_normal.z {
+                    // Eliminate the y component of all the elements
+                    let v0_flat = Vector3::<f32>::new(face.v0.x, 0.0, face.v0.z);
+                    let v1_flat = Vector3::<f32>::new(face.v1.x, 0.0, face.v1.z);
+                    let v2_flat = Vector3::<f32>::new(face.v2.x, 0.0, face.v2.z);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, 0.0, collision_point.z);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                } else {
+                    // Eliminate the z component of all the elements
+                    let v0_flat = Vector3::<f32>::new(face.v0.x, face.v0.y, 0.0);
+                    let v1_flat = Vector3::<f32>::new(face.v1.x, face.v1.y, 0.0);
+                    let v2_flat = Vector3::<f32>::new(face.v2.x, face.v2.y, 0.0);
+                    let point_flat = Vector3::<f32>::new(collision_point.x, collision_point.y, 0.0);
+                    (v0_flat, v1_flat, v2_flat, point_flat)
+                };
+            // Then check the point by comparing the orientation of the cross products
+            let cross0 = (v1_flat - v0_flat).cross(point_flat - v0_flat);
+            let cross1 = (v2_flat - v1_flat).cross(point_flat - v1_flat);
+            let cross2 = (v0_flat - v2_flat).cross(point_flat - v2_flat);
+            let cross0_orientation = cross0.dot(face.normal()).is_sign_positive();
+            let cross1_orientation = cross1.dot(face.normal()).is_sign_positive();
+            let cross2_orientation = cross2.dot(face.normal()).is_sign_positive();
+            // The point is in the polygon iff the orientation for all three cross products are equal.
+            cross0_orientation == cross1_orientation && cross1_orientation == cross2_orientation
+        });
+        match result {
+            Some(face) => Some(*face),
+            None => None,
         }
     }
 
@@ -117,6 +186,7 @@ impl Obstacle {
         &self.vertices
     }
 
+    #[allow(dead_code)]
     pub fn get_edges(&self) -> &Vec<Edge> {
         &self.edges
     }
@@ -131,11 +201,11 @@ mod tests {
     use cgmath::{Vector3, Zero};
     use itertools::Itertools;
 
+    use super::CollidableMesh;
     use super::Edge;
     use super::Face;
-    use super::Obstacle;
 
-    fn get_strip() -> Obstacle {
+    fn get_strip() -> CollidableMesh {
         let vertex_positions = vec![
             Vector3::<f32>::zero(),
             Vector3::<f32>::unit_x(),
@@ -143,7 +213,7 @@ mod tests {
             Vector3::<f32>::unit_y(),
         ];
         let vertex_indices = vec![0, 3, 2, 0, 1, 3];
-        Obstacle::new(vertex_positions, vertex_indices)
+        CollidableMesh::new(vertex_positions, vertex_indices)
     }
 
     #[test]

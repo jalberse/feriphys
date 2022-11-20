@@ -1,6 +1,7 @@
 use crate::{
-    graphics::texture, simulation::springy::obstacle,
+    graphics::texture,
     simulation::springy::springy_mesh::SpringyMesh,
+    simulation::{rigidbody::rigidbody, springy::collidable_mesh},
 };
 
 use cgmath::Vector3;
@@ -89,10 +90,10 @@ impl ColoredMesh {
         }
     }
 
-    pub fn from_obstacle(
+    pub fn from_collidable_mesh(
         device: &wgpu::Device,
         name: String,
-        springy_mesh: &obstacle::Obstacle,
+        springy_mesh: &collidable_mesh::CollidableMesh,
         color: [f32; 3],
     ) -> ColoredMesh {
         // TODO get_vertices() can be made into a Trait so this fn can be generalized with from_springy_mesh
@@ -104,6 +105,32 @@ impl ColoredMesh {
         ColoredMesh {
             name,
             vertex_positions,
+            vertex_indices,
+            vertex_buffer,
+            index_buffer,
+            num_elements,
+        }
+    }
+
+    pub fn from_rigidbody(
+        device: &wgpu::Device,
+        name: String,
+        rigidbody: &rigidbody::RigidBody,
+        color: [f32; 3],
+    ) -> ColoredMesh {
+        let (local_vertex_positions, vertex_indices) =
+            rigidbody.get_mesh().get_vertices_to_render();
+        let world_vertex_positions = local_vertex_positions
+            .iter()
+            .map(|v| rigidbody.get_rotation_matrix() * v + rigidbody.get_position())
+            .collect_vec();
+        let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
+        let (vertex_buffer, index_buffer) =
+            Self::get_buffers(device, &world_vertex_positions, &vertex_indices, color);
+        let num_elements = vertex_indices.len() as u32;
+        ColoredMesh {
+            name,
+            vertex_positions: world_vertex_positions,
             vertex_indices,
             vertex_buffer,
             index_buffer,

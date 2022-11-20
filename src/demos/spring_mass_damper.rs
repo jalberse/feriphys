@@ -6,7 +6,7 @@ use crate::{
     },
     gui,
     simulation::springy::springy_mesh::{self, SpringyMesh},
-    simulation::springy::{obstacle::Obstacle, simulation::Simulation},
+    simulation::springy::{collidable_mesh::CollidableMesh, simulation::Simulation},
 };
 
 use cgmath::{Vector3, Zero};
@@ -117,7 +117,7 @@ impl State {
         let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances);
 
         // TODO handle rendering *all* obstacles in simulation
-        let obstacle_mesh = ColoredMesh::from_obstacle(
+        let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
             &self.simulation.get_obstacles()[0],
@@ -269,6 +269,7 @@ fn get_springy_cube() -> springy_mesh::SpringyMesh {
     cube
 }
 
+#[allow(dead_code)]
 fn get_springy_tri() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),
@@ -287,6 +288,7 @@ fn get_springy_tri() -> springy_mesh::SpringyMesh {
     )
 }
 
+#[allow(dead_code)]
 fn get_springy_quad() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),
@@ -306,6 +308,7 @@ fn get_springy_quad() -> springy_mesh::SpringyMesh {
     )
 }
 
+#[allow(dead_code)]
 fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
     let vertex_positions = vec![
         Vector3::<f32>::zero(),
@@ -325,7 +328,7 @@ fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
     )
 }
 
-fn get_obstacles() -> Vec<Obstacle> {
+fn get_obstacles() -> Vec<CollidableMesh> {
     let vertex_positions = vec![
         -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
         Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
@@ -333,5 +336,5 @@ fn get_obstacles() -> Vec<Obstacle> {
         -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
-    vec![Obstacle::new(vertex_positions, indices)]
+    vec![CollidableMesh::new(vertex_positions, indices)]
 }

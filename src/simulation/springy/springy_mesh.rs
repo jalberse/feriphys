@@ -1,8 +1,8 @@
-use std::{f32::consts::PI, pin, time::Duration};
+use std::{f32::consts::PI, time::Duration};
 
-use crate::simulation::{consts, springy::obstacle, state::Stateful};
+use crate::simulation::{consts, springy::collidable_mesh, state::Stateful};
 
-use super::config::Config;
+use super::{collidable_mesh::CollidableMesh, config::Config};
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
@@ -108,6 +108,7 @@ impl StrutKey {
 /// A face of a SpringyMesh
 struct Face {
     /// The indices of the struts comprising this Face's edges in the SpringyMesh
+    #[allow(dead_code)]
     strut_indices: (usize, usize, usize),
     vertex_indices: (usize, usize, usize),
 }
@@ -421,7 +422,7 @@ impl SpringyMesh {
     pub fn update_points(
         &mut self,
         mut new_points: Vec<Point>,
-        obstacles: &Vec<obstacle::Obstacle>,
+        obstacles: &Vec<collidable_mesh::CollidableMesh>,
         config: &Config,
     ) {
         let obstacle_faces = obstacles
@@ -429,28 +430,16 @@ impl SpringyMesh {
             .map(|o| o.get_faces())
             .flatten()
             .collect_vec();
-        let obstacle_edges = obstacles
-            .iter()
-            .map(|o| o.get_edges())
-            .flatten()
-            .collect_vec();
-        let obstacle_vertices = obstacles
-            .iter()
-            .map(|o| o.get_vertices())
-            .flatten()
-            .collect_vec();
-
         // TODO collision detection can be more efficient with bounding box checks.
 
         // Vertex-Face collisions
         for (new_point, old_point) in new_points.iter_mut().zip(&self.points) {
-            let collided_face_maybe = self.get_collided_face(
-                old_point,
-                new_point,
+            if let Some(face) = CollidableMesh::get_collided_face_from_list(
                 &obstacle_faces,
+                old_point.position,
+                new_point.position,
                 Duration::from_secs_f32(config.dt),
-            );
-            if let Some(face) = collided_face_maybe {
+            ) {
                 let old_distance_to_plane = face.distance_from_plane(&old_point.position);
                 let new_distance_to_plane = face.distance_from_plane(&new_point.position);
 
@@ -497,69 +486,6 @@ impl SpringyMesh {
         for pin_index in self.pinned_points.iter_mut() {
             self.points[*pin_index] = original_points[*pin_index];
         }
-    }
-
-    fn get_collided_face<'a>(
-        &self,
-        old_point: &Point,
-        new_point: &Point,
-        faces: &'a Vec<&obstacle::Face>,
-        dt: Duration,
-    ) -> Option<&&'a obstacle::Face> {
-        faces.iter().find(|face| -> bool {
-            let old_position = old_point.position;
-            let old_velocity = old_point.velocity;
-            let new_position = new_point.position;
-
-            let old_distance_to_plane = face.distance_from_plane(&old_position);
-            let new_distance_to_plane = face.distance_from_plane(&new_position);
-
-            let crossed_plane = old_distance_to_plane.is_sign_positive()
-                != new_distance_to_plane.is_sign_positive();
-
-            if !crossed_plane {
-                return false;
-            }
-            // Get the point in the plane of the tri
-            let fraction_timestep =
-                old_distance_to_plane / (old_distance_to_plane - new_distance_to_plane);
-            let collision_point =
-                old_position + dt.as_secs_f32() * fraction_timestep * old_velocity;
-            let face_normal = face.normal();
-            // Flatten the tri and the point into 2D to check containment.
-            let (v0_flat, v1_flat, v2_flat, point_flat) =
-                if face_normal.x >= face_normal.y && face_normal.x >= face_normal.z {
-                    // Eliminate the x component of all the elements
-                    let v0_flat = Vector3::<f32>::new(0.0, face.v0.y, face.v0.z);
-                    let v1_flat = Vector3::<f32>::new(0.0, face.v1.y, face.v1.z);
-                    let v2_flat = Vector3::<f32>::new(0.0, face.v2.y, face.v2.z);
-                    let point_flat = Vector3::<f32>::new(0.0, collision_point.y, collision_point.z);
-                    (v0_flat, v1_flat, v2_flat, point_flat)
-                } else if face_normal.y >= face_normal.x && face_normal.y >= face_normal.z {
-                    // Eliminate the y component of all the elements
-                    let v0_flat = Vector3::<f32>::new(face.v0.x, 0.0, face.v0.z);
-                    let v1_flat = Vector3::<f32>::new(face.v1.x, 0.0, face.v1.z);
-                    let v2_flat = Vector3::<f32>::new(face.v2.x, 0.0, face.v2.z);
-                    let point_flat = Vector3::<f32>::new(collision_point.x, 0.0, collision_point.z);
-                    (v0_flat, v1_flat, v2_flat, point_flat)
-                } else {
-                    // Eliminate the z component of all the elements
-                    let v0_flat = Vector3::<f32>::new(face.v0.x, face.v0.y, 0.0);
-                    let v1_flat = Vector3::<f32>::new(face.v1.x, face.v1.y, 0.0);
-                    let v2_flat = Vector3::<f32>::new(face.v2.x, face.v2.y, 0.0);
-                    let point_flat = Vector3::<f32>::new(collision_point.x, collision_point.y, 0.0);
-                    (v0_flat, v1_flat, v2_flat, point_flat)
-                };
-            // Then check the point by comparing the orientation of the cross products
-            let cross0 = (v1_flat - v0_flat).cross(point_flat - v0_flat);
-            let cross1 = (v2_flat - v1_flat).cross(point_flat - v1_flat);
-            let cross2 = (v0_flat - v2_flat).cross(point_flat - v2_flat);
-            let cross0_orientation = cross0.dot(face.normal()).is_sign_positive();
-            let cross1_orientation = cross1.dot(face.normal()).is_sign_positive();
-            let cross2_orientation = cross2.dot(face.normal()).is_sign_positive();
-            // The point is in the polygon iff the orientation for all three cross products are equal.
-            cross0_orientation == cross1_orientation && cross1_orientation == cross2_orientation
-        })
     }
 
     /// Returns the vertices and their indices. Useful for making a mesh for rendering
@@ -616,6 +542,7 @@ impl SpringyMesh {
         });
     }
 
+    #[allow(dead_code)]
     fn apply_torsional_forces(&mut self) {
         let mut vertex_forces: FxHashMap<usize, Vector3<f32>> = FxHashMap::default();
         self.struts.iter().for_each(|strut| {

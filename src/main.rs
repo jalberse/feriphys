@@ -16,5 +16,6 @@ fn main() {
         Demos::Flocking => demos::flocking::run(),
         Demos::SpringMassDamper => demos::spring_mass_damper::run(),
         Demos::Cloth => demos::cloth::run(),
+        Demos::RigidBody => demos::rigidbody::run(),
     }
 }
