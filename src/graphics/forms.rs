@@ -5,64 +5,13 @@ use cgmath::Vector3;
 
 #[allow(dead_code)]
 pub fn get_cube_interior_normals(device: &wgpu::Device, color: [f32; 3]) -> model::ColoredMesh {
-    let vertex_positions = vec![
-        // front
-        cgmath::Vector3 {
-            x: -1.0,
-            y: -1.0,
-            z: 1.0,
-        },
-        cgmath::Vector3 {
-            x: 1.0,
-            y: -1.0,
-            z: 1.0,
-        },
-        cgmath::Vector3 {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-        },
-        cgmath::Vector3 {
-            x: -1.0,
-            y: 1.0,
-            z: 1.0,
-        },
-        cgmath::Vector3 {
-            x: -1.0,
-            y: -1.0,
-            z: -1.0,
-        },
-        cgmath::Vector3 {
-            x: 1.0,
-            y: -1.0,
-            z: -1.0,
-        },
-        cgmath::Vector3 {
-            x: 1.0,
-            y: 1.0,
-            z: -1.0,
-        },
-        cgmath::Vector3 {
-            x: -1.0,
-            y: 1.0,
-            z: -1.0,
-        },
-    ];
-
-    let indices: Vec<u16> = vec![
-        2, 1, 0, 0, 3, 2, // front
-        6, 5, 1, 1, 2, 6, // right
-        5, 6, 7, 7, 4, 5, // back
-        3, 0, 4, 4, 7, 3, // left
-        1, 5, 4, 4, 0, 1, // bottom
-        6, 2, 3, 3, 7, 6, // top
-    ];
-
     // Cubes with averaged vertex normals look bad withoutholding edges. So we'll use non-averaged
     // vertexes. That means generating the duplicate ones, and using 0..n as indices.
+    let (vertex_positions, indices) = get_cube_interior_normals_vertices();
+
     let vertex_positions: Vec<Vector3<f32>> = indices
         .iter()
-        .map(|i| -> Vector3<f32> { vertex_positions[*i as usize] })
+        .map(|i| -> Vector3<f32> { vertex_positions[*i] })
         .collect();
     let vertex_indices = Vec::from_iter(0..vertex_positions.len() as u16);
 
@@ -191,6 +140,63 @@ pub fn get_cube_vertices() -> (Vec<Vector3<f32>>, Vec<usize>) {
         4, 0, 3, 3, 7, 4, // left
         4, 5, 1, 1, 0, 4, // bottom
         3, 2, 6, 6, 7, 3, // top
+    ];
+
+    (vertex_positions, indices)
+}
+
+pub fn get_cube_interior_normals_vertices() -> (Vec<Vector3<f32>>, Vec<usize>) {
+    let vertex_positions = vec![
+        // front
+        cgmath::Vector3 {
+            x: -1.0,
+            y: -1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: -1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: 1.0,
+            z: 1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: -1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: -1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: 1.0,
+            y: 1.0,
+            z: -1.0,
+        },
+        cgmath::Vector3 {
+            x: -1.0,
+            y: 1.0,
+            z: -1.0,
+        },
+    ];
+
+    let indices: Vec<usize> = vec![
+        2, 1, 0, 0, 3, 2, // front
+        6, 5, 1, 1, 2, 6, // right
+        5, 6, 7, 7, 4, 5, // back
+        3, 0, 4, 4, 7, 3, // left
+        1, 5, 4, 4, 0, 1, // bottom
+        6, 2, 3, 3, 7, 6, // top
     ];
 
     (vertex_positions, indices)

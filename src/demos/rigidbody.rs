@@ -12,6 +12,7 @@ use crate::{
 };
 
 use cgmath::Vector3;
+use itertools::Itertools;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -228,12 +229,7 @@ pub fn run() {
 }
 
 fn get_obstacles() -> Vec<CollidableMesh> {
-    let vertex_positions = vec![
-        -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
+    let vertex_positions = vertex_positions.iter().map(|v| v * 2.0).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
 }

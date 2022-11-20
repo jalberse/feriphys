@@ -306,7 +306,7 @@ impl RigidBody {
                         ));
                 let impulse = impulse_magnitude * face.normal();
 
-                new_state.position = collision_point - r + consts::EPSILON * face.normal();
+                new_state.position = collision_point - r + consts::EPSILON * 2.0 * face.normal();
                 new_state.apply_impulse(impulse, r);
             }
         }
