@@ -28,7 +28,7 @@ struct State {
     light_bind_group: wgpu::BindGroup,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
-    obstacle: CollidableMesh,
+    obstacles: Vec<CollidableMesh>,
     simulation: Simulation,
 }
 
@@ -50,7 +50,7 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let obstacle = get_obstacle();
+        let obstacles = get_obstacles();
         let simulation = Simulation::new();
 
         Self {
@@ -61,7 +61,7 @@ impl State {
             light_bind_group,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
-            obstacle,
+            obstacles,
             simulation,
         }
     }
@@ -84,7 +84,7 @@ impl State {
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
         while self.time_accumulator >= self.simulation.get_timestep() {
-            let elapsed_sim_time = self.simulation.step();
+            let elapsed_sim_time = self.simulation.step(&self.obstacles);
             self.time_accumulator = self.time_accumulator - elapsed_sim_time;
         }
     }
@@ -102,10 +102,12 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
+        // TODO generalize to all obstacles (just map collect this for each obstacle and do the same
+        // for drawing the resultant entities)
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
-            &self.obstacle,
+            &self.obstacles[0],
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
@@ -224,8 +226,8 @@ pub fn run() {
     });
 }
 
-fn get_obstacle() -> CollidableMesh {
+fn get_obstacles() -> Vec<CollidableMesh> {
     let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
     let vertex_positions = vertex_positions.iter().map(|v| v * 2.0).collect_vec();
-    CollidableMesh::new(vertex_positions, indices)
+    vec![CollidableMesh::new(vertex_positions, indices)]
 }

@@ -8,6 +8,8 @@ pub struct Config {
     pub integration: Integration,
     pub dt: f32, // Seconds as f32
     pub gravity: Vector3<f32>,
+    pub coefficient_of_restitution: f32,
+    pub coefficient_of_friction: f32,
 }
 
 impl Default for Config {
@@ -16,6 +18,8 @@ impl Default for Config {
             integration: Integration::Rk4,
             dt: Duration::from_millis(1).as_secs_f32(),
             gravity: Vector3::<f32>::zero(),
+            coefficient_of_restitution: 0.7,
+            coefficient_of_friction: 0.3,
         }
     }
 }

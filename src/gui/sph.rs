@@ -49,6 +49,20 @@ impl Ui for SphUi {
                 )
                 .text("Gravity Z"),
             );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.coefficient_of_restitution,
+                    SphUi::MIN_COEFFICIENT_OF_RESTITUTION..=SphUi::MAX_COEFFICIENT_OF_RESTITUTION,
+                )
+                .text("Restitution"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.coefficient_of_friction,
+                    SphUi::MIN_COEFFICIENT_OF_FRICTION..=SphUi::MAX_COEFFICIENT_OF_FRICTION,
+                )
+                .text("Friction"),
+            );
         });
     }
 }
@@ -59,6 +73,12 @@ impl SphUi {
 
     const GRAVITY_MIN: f32 = -2.0;
     const GRAVITY_MAX: f32 = 2.0;
+
+    const MIN_COEFFICIENT_OF_RESTITUTION: f32 = 0.0;
+    const MAX_COEFFICIENT_OF_RESTITUTION: f32 = 1.0;
+
+    const MIN_COEFFICIENT_OF_FRICTION: f32 = 0.0;
+    const MAX_COEFFICIENT_OF_FRICTION: f32 = 1.0;
 
     pub fn new() -> SphUi {
         SphUi {
