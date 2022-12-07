@@ -1,5 +1,6 @@
 pub mod bounce;
 pub mod bounding_box;
+pub mod collidable_mesh;
 pub mod consts;
 pub mod flocking;
 pub mod parametric;

@@ -5,8 +5,9 @@ use crate::{
         instance::Instance, light, model::ColoredMesh, scene::Scene, texture,
     },
     gui,
+    simulation::collidable_mesh::CollidableMesh,
+    simulation::springy::simulation::Simulation,
     simulation::springy::springy_mesh::{self, SpringyMesh},
-    simulation::springy::{collidable_mesh::CollidableMesh, simulation::Simulation},
 };
 
 use cgmath::{Vector3, Zero};

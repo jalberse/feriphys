@@ -6,8 +6,8 @@ use crate::{
     },
     gui,
     simulation::{
+        collidable_mesh::CollidableMesh,
         rigidbody::{rigidbody::RigidBody, simulation::Simulation},
-        springy::collidable_mesh::CollidableMesh,
     },
 };
 

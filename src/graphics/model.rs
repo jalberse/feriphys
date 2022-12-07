@@ -1,7 +1,7 @@
 use crate::{
     graphics::texture,
     simulation::springy::springy_mesh::SpringyMesh,
-    simulation::{rigidbody::rigidbody, springy::collidable_mesh},
+    simulation::{collidable_mesh, rigidbody::rigidbody},
 };
 
 use cgmath::Vector3;

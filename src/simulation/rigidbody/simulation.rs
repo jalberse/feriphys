@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::simulation::{
-    springy::collidable_mesh::CollidableMesh,
+    collidable_mesh::CollidableMesh,
     state::{Integration, State},
 };
 

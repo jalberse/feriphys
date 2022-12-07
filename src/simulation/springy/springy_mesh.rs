@@ -1,8 +1,9 @@
 use std::{f32::consts::PI, time::Duration};
 
-use crate::simulation::{consts, springy::collidable_mesh, state::Stateful};
+use crate::simulation::collidable_mesh::CollidableMesh;
+use crate::simulation::{consts, state::Stateful};
 
-use super::{collidable_mesh::CollidableMesh, config::Config};
+use super::config::Config;
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
@@ -422,7 +423,7 @@ impl SpringyMesh {
     pub fn update_points(
         &mut self,
         mut new_points: Vec<Point>,
-        obstacles: &Vec<collidable_mesh::CollidableMesh>,
+        obstacles: &Vec<CollidableMesh>,
         config: &Config,
     ) {
         let obstacle_faces = obstacles

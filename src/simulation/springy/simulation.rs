@@ -3,8 +3,8 @@ use std::time::Duration;
 use crate::gui;
 use crate::simulation::state::Integration;
 
+use super::super::collidable_mesh::CollidableMesh;
 use super::super::state::State;
-use super::collidable_mesh::CollidableMesh;
 use super::{config::Config, springy_mesh::SpringyMesh};
 
 pub struct Simulation {

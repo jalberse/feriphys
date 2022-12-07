@@ -5,7 +5,7 @@ use crate::{
         instance::Instance, light, model::ColoredMesh, texture,
     },
     gui,
-    simulation::springy::collidable_mesh::CollidableMesh,
+    simulation::collidable_mesh::CollidableMesh,
 };
 
 use itertools::Itertools;
