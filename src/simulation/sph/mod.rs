@@ -19,7 +19,7 @@ pub struct Particle {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
 
-    accumulated_force: Vector3<f32>,
+    du_dt: Vector3<f32>,
 }
 
 impl Particle {
@@ -28,7 +28,7 @@ impl Particle {
             mass,
             position,
             velocity,
-            accumulated_force: Vector3::<f32>::zero(),
+            du_dt: Vector3::<f32>::zero(),
         }
     }
 
@@ -42,7 +42,7 @@ impl Stateful for Particle {
         1 + // mass
         3 + // position
         3 + // velocity
-        3 // accumulated force
+        3 // du_dt
     }
 
     fn as_state(&self) -> Vec<f32> {
@@ -54,9 +54,9 @@ impl Stateful for Particle {
             self.velocity.x,
             self.velocity.y,
             self.velocity.z,
-            self.accumulated_force.x,
-            self.accumulated_force.y,
-            self.accumulated_force.z,
+            self.du_dt.x,
+            self.du_dt.y,
+            self.du_dt.z,
         ];
         if state_vec.len() != Self::num_state_elements() {
             panic!("Incorrect state vector size!");
@@ -73,10 +73,10 @@ impl Stateful for Particle {
             self.velocity.y,
             self.velocity.z,
             // Velocity derivative
-            self.accumulated_force.x / self.mass,
-            self.accumulated_force.y / self.mass,
-            self.accumulated_force.z / self.mass,
-            // Accumulated force
+            self.du_dt.x,
+            self.du_dt.y,
+            self.du_dt.z,
+            // du_dt
             0.0,
             0.0,
             0.0,
@@ -99,7 +99,7 @@ impl Stateful for Particle {
             mass,
             position,
             velocity,
-            accumulated_force,
+            du_dt: accumulated_force,
         }
     }
 }
@@ -125,9 +125,14 @@ impl Simulation {
     pub fn step(&mut self, obstacles: &Vec<CollidableMesh>) -> Duration {
         // TODO construct kdtree
 
-        // Accumulate forces on the particles
+        // Calculate the derivative of the velocity for each particle according to
+        // Navier Stokes (momentum)
         self.particles.iter_mut().for_each(|particle| {
-            particle.accumulated_force += self.config.gravity;
+            particle.du_dt += self.config.gravity / particle.mass;
+
+            // TODO Presure gradient
+
+            // TODO Diffusion
         });
 
         let state = State::new(self.particles.clone());
@@ -194,8 +199,7 @@ impl Simulation {
                 let collision_point = old_particle.position
                     + self.config.dt * fraction_timestep * old_particle.velocity;
                 let velocity_collision = old_particle.velocity
-                    + self.config.dt * fraction_timestep * old_particle.accumulated_force
-                        / old_particle.mass;
+                    + self.config.dt * fraction_timestep * old_particle.du_dt / old_particle.mass;
 
                 let new_position = collision_point + face.normal() * consts::EPSILON;
 
@@ -230,6 +234,6 @@ impl Simulation {
 
         self.particles
             .iter_mut()
-            .for_each(|particle| particle.accumulated_force = Vector3::<f32>::zero());
+            .for_each(|particle| particle.du_dt = Vector3::<f32>::zero());
     }
 }
