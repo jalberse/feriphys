@@ -148,7 +148,7 @@ impl State {
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
-            )
+            );
         }
 
         encoder.finish()
