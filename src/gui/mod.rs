@@ -2,6 +2,7 @@ pub mod bounce;
 pub mod flocking;
 pub mod particles;
 pub mod rigidbody;
+pub mod sph;
 pub mod spring_mass_damper;
 
 use egui::FontDefinitions;

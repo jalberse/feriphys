@@ -5,8 +5,8 @@ use crate::{
         instance::Instance, light, model::ColoredMesh, texture,
     },
     gui,
+    simulation::collidable_mesh::CollidableMesh,
     simulation::sph::Simulation,
-    simulation::{collidable_mesh::CollidableMesh, particles_cpu::particle},
 };
 
 use cgmath::Rotation3;
@@ -83,11 +83,10 @@ impl State {
         self.time_accumulator = self.time_accumulator + frame_time;
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
-        // TODO call simulation once we actually have it
-        // while self.time_accumulator >= self.simulation.get_timestep() {
-        //     let elapsed_sim_time = self.simulation.step();
-        //     self.time_accumulator = self.time_accumulator - elapsed_sim_time;
-        // }
+        while self.time_accumulator >= self.simulation.get_timestep() {
+            let elapsed_sim_time = self.simulation.step();
+            self.time_accumulator = self.time_accumulator - elapsed_sim_time;
+        }
     }
 
     fn render(&mut self, output: &wgpu::SurfaceTexture) -> wgpu::CommandBuffer {
@@ -160,7 +159,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    // TODO get sph UI once made
+    let mut ui = gui::sph::SphUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -173,12 +172,20 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                // TODO sync sim from UI
+                state.simulation.sync_sim_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
-                // TODO get gui_render_command_buffer
+                let gui_render_command_buffer = gui.render(
+                    &mut ui,
+                    frame_time,
+                    &state.gpu.device,
+                    &state.gpu.config,
+                    &state.gpu.queue,
+                    &window,
+                    &output
+                );
 
-                state.gpu.queue.submit([simulation_render_command_buffer]);
+                state.gpu.queue.submit([simulation_render_command_buffer, gui_render_command_buffer]);
                 output.present();
             }
             Event::DeviceEvent {
