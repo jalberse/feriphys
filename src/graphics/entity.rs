@@ -5,7 +5,6 @@ use super::model::ColoredMesh;
 use super::model::DrawColoredMesh;
 use super::model::DrawModel;
 use super::model::Model;
-use crate::simulation::particles_cpu::particles::MAX_INSTANCES;
 
 use cgmath::{EuclideanSpace, InnerSpace, Vector3};
 use wgpu::{BindGroup, Buffer};
@@ -21,8 +20,15 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub fn new(gpu: &GPUInterface, model: Model, instances: Vec<Instance>) -> Entity {
-        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances, MAX_INSTANCES);
+    /// Capacity is the maximum number of instances the Entity will allow. If None, the size of instances is used.
+    ///     Specifying capacity allows the instances to grow or shrink for e.g. particle systems.
+    pub fn new(
+        gpu: &GPUInterface,
+        model: Model,
+        instances: Vec<Instance>,
+        capacity: Option<usize>,
+    ) -> Entity {
+        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances, capacity);
 
         Entity {
             model,
@@ -67,12 +73,15 @@ pub struct ColoredMeshEntity {
 }
 
 impl ColoredMeshEntity {
+    /// Capacity is the maximum number of instances the Entity will allow. If None, the size of instances is used.
+    ///     Specifying capacity allows the instances to grow or shrink for e.g. particle systems.
     pub fn new(
         gpu: &GPUInterface,
         mesh: ColoredMesh,
         instances: Vec<Instance>,
+        capacity: Option<usize>,
     ) -> ColoredMeshEntity {
-        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances, MAX_INSTANCES);
+        let instance_buffer = InstanceRaw::create_buffer_from_vec(&gpu, &instances, capacity);
 
         ColoredMeshEntity {
             mesh,

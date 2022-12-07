@@ -111,7 +111,8 @@ impl State {
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
-        let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
+        let obstacle_entity =
+            ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances, None);
 
         // TODO maybe cache the sphere lol
         let sphere = forms::generate_sphere(&self.gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
@@ -127,7 +128,8 @@ impl State {
                 scale: 1.0,
             })
             .collect_vec();
-        let particles_entity = ColoredMeshEntity::new(&self.gpu, sphere, particle_instances);
+        // TODO rather than creating a new entity, we should just update the entity's instances. This avoids creating a new buffer.
+        let particles_entity = ColoredMeshEntity::new(&self.gpu, sphere, particle_instances, None);
 
         // TODO get other data from simulation to update Instance data to e.g. color by density, pressure, velocity, curl, etc.
         //         That might be a function that takes an Enum for DataRequest and returns a color for it in the simulation, or something.

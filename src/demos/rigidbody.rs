@@ -118,7 +118,7 @@ impl State {
         );
         let rigidbody_instances = vec![Instance::default()];
         let rigidbody_entity =
-            ColoredMeshEntity::new(&self.gpu, rigidbody_mesh, rigidbody_instances);
+            ColoredMeshEntity::new(&self.gpu, rigidbody_mesh, rigidbody_instances, None);
 
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
@@ -127,7 +127,8 @@ impl State {
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
-        let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
+        let obstacle_entity =
+            ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances, None);
 
         {
             let mut render_pass =

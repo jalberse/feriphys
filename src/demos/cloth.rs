@@ -135,7 +135,7 @@ impl State {
             [0.9, 0.1, 0.1],
         );
         let cube_instances = vec![Instance::default()];
-        let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances);
+        let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances, None);
 
         // TODO handle rendering *all* obstacles in simulation
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
@@ -145,7 +145,8 @@ impl State {
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
-        let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
+        let obstacle_entity =
+            ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances, None);
 
         {
             let mut render_pass =

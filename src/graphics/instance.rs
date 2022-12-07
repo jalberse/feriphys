@@ -101,8 +101,14 @@ impl InstanceRaw {
     pub fn create_buffer_from_vec(
         gpu: &GPUInterface,
         instances: &Vec<Instance>,
-        capacity: usize,
+        capacity: Option<usize>,
     ) -> Buffer {
+        let capacity = if let Some(capacity) = capacity {
+            capacity
+        } else {
+            instances.len()
+        };
+
         let buffer = gpu.device.create_buffer(&BufferDescriptor {
             label: Some("Instance Buffer"),
             size: capacity as u64 * std::mem::size_of::<InstanceRaw>() as u64,
