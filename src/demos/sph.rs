@@ -9,7 +9,7 @@ use crate::{
     simulation::sph::Simulation,
 };
 
-use cgmath::Rotation3;
+use cgmath::{Rotation3, Vector3};
 use itertools::Itertools;
 use winit::{
     event::*,
@@ -28,8 +28,8 @@ struct State {
     light_bind_group: wgpu::BindGroup,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
-    obstacles: Vec<CollidableMesh>,
     simulation: Simulation,
+    particles_entity: ColoredMeshEntity,
 }
 
 impl State {
@@ -50,8 +50,24 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let obstacles = get_obstacles();
-        let simulation = Simulation::new();
+        let min_bounds = Vector3::new(-2.0, -2.0, -2.0);
+        let max_bounds = Vector3::new(2.0, 2.0, 2.0);
+        let simulation = Simulation::new(min_bounds, max_bounds);
+
+        let sphere = forms::generate_sphere(&gpu.device, [0.9, 0.1, 0.1], 0.05, 8, 8);
+        let particles = simulation.get_particles();
+        let particle_instances = particles
+            .iter()
+            .map(|p| Instance {
+                position: *p.position(),
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            })
+            .collect_vec();
+        let particles_entity = ColoredMeshEntity::new(&gpu, sphere, particle_instances, None);
 
         Self {
             gpu,
@@ -61,8 +77,8 @@ impl State {
             light_bind_group,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
-            obstacles,
             simulation,
+            particles_entity,
         }
     }
 
@@ -84,7 +100,7 @@ impl State {
         self.camera_bundle.update_gpu(&self.gpu, frame_time);
 
         while self.time_accumulator >= self.simulation.get_timestep() {
-            let elapsed_sim_time = self.simulation.step(&self.obstacles);
+            let elapsed_sim_time = self.simulation.step();
             self.time_accumulator = self.time_accumulator - elapsed_sim_time;
         }
     }
@@ -102,20 +118,17 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-        // TODO generalize to all obstacles (just map collect this for each obstacle and do the same
-        // for drawing the resultant entities)
+        let obstacles = get_obstacles();
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
-            &self.obstacles[0],
+            &obstacles[0],
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
         let obstacle_entity =
             ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances, None);
 
-        // TODO maybe cache the sphere lol
-        let sphere = forms::generate_sphere(&self.gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
         let particles = self.simulation.get_particles();
         let particle_instances = particles
             .iter()
@@ -128,8 +141,8 @@ impl State {
                 scale: 1.0,
             })
             .collect_vec();
-        // TODO rather than creating a new entity, we should just update the entity's instances. This avoids creating a new buffer.
-        let particles_entity = ColoredMeshEntity::new(&self.gpu, sphere, particle_instances, None);
+        self.particles_entity
+            .update_instances(&self.gpu, particle_instances);
 
         // TODO get other data from simulation to update Instance data to e.g. color by density, pressure, velocity, curl, etc.
         //         That might be a function that takes an Enum for DataRequest and returns a color for it in the simulation, or something.
@@ -144,7 +157,7 @@ impl State {
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
             );
-            particles_entity.draw(
+            self.particles_entity.draw(
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
@@ -229,6 +242,7 @@ pub fn run() {
 }
 
 fn get_obstacles() -> Vec<CollidableMesh> {
+    // TODO
     let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
     let vertex_positions = vertex_positions.iter().map(|v| v * 2.0).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
