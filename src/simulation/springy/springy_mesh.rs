@@ -460,12 +460,19 @@ impl SpringyMesh {
 
                 let velocity_response_normal =
                     -1.0 * velocity_collision_normal * config.coefficient_of_restitution;
-                let velocity_response_tangent = velocity_collision_tangent
-                    - velocity_collision_tangent.normalize()
-                        * f32::min(
-                            config.coefficient_of_friction * velocity_collision_normal.magnitude(),
-                            velocity_collision_tangent.magnitude(),
-                        );
+                let velocity_response_tangent = if velocity_collision_tangent.is_zero()
+                    || velocity_collision_tangent.magnitude().is_nan()
+                {
+                    Vector3::<f32>::zero()
+                } else {
+                    velocity_collision_tangent
+                        - velocity_collision_tangent.normalize()
+                            * f32::min(
+                                config.coefficient_of_friction
+                                    * velocity_collision_normal.magnitude(),
+                                velocity_collision_tangent.magnitude(),
+                            )
+                };
 
                 let velocity_response = velocity_response_normal + velocity_response_tangent;
 
