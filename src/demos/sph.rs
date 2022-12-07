@@ -1,13 +1,15 @@
 /// A demo of the spring-mass-damper simulation.
 use crate::{
     graphics::{
-        self, camera::CameraBundle, entity::ColoredMeshEntity, gpu_interface::GPUInterface,
+        self, camera::CameraBundle, entity::ColoredMeshEntity, forms, gpu_interface::GPUInterface,
         instance::Instance, light, model::ColoredMesh, texture,
     },
     gui,
-    simulation::collidable_mesh::CollidableMesh,
+    simulation::sph::Simulation,
+    simulation::{collidable_mesh::CollidableMesh, particles_cpu::particle},
 };
 
+use cgmath::Rotation3;
 use itertools::Itertools;
 use winit::{
     event::*,
@@ -27,6 +29,7 @@ struct State {
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
     obstacle: CollidableMesh,
+    simulation: Simulation,
 }
 
 impl State {
@@ -48,6 +51,7 @@ impl State {
         );
 
         let obstacle = get_obstacle();
+        let simulation = Simulation::new();
 
         Self {
             gpu,
@@ -58,6 +62,7 @@ impl State {
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
             obstacle,
+            simulation,
         }
     }
 
@@ -107,7 +112,22 @@ impl State {
         let obstacle_instances = vec![Instance::default()];
         let obstacle_entity = ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances);
 
-        // TODO get position data from simulation to update Instance data
+        // TODO maybe cache the sphere lol
+        let sphere = forms::generate_sphere(&self.gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
+        let particles = self.simulation.get_particles();
+        let particle_instances = particles
+            .iter()
+            .map(|p| Instance {
+                position: *p.position(),
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            })
+            .collect_vec();
+        let particles_entity = ColoredMeshEntity::new(&self.gpu, sphere, particle_instances);
+
         // TODO get other data from simulation to update Instance data to e.g. color by density, pressure, velocity, curl, etc.
         //         That might be a function that takes an Enum for DataRequest and returns a color for it in the simulation, or something.
 
@@ -120,7 +140,12 @@ impl State {
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
-            )
+            );
+            particles_entity.draw(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
         }
 
         encoder.finish()

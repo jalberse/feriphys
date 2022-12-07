@@ -7,5 +7,6 @@ pub mod parametric;
 pub mod particles_cpu;
 pub mod point_attractor;
 pub mod rigidbody;
+pub mod sph;
 pub mod springy;
 pub mod state;
