@@ -6,8 +6,9 @@ use super::consts;
 
 use cgmath::{InnerSpace, Vector3, Zero};
 use itertools::Itertools;
-use kiddo::distance::{dot_product, squared_euclidean};
+use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
+use rustc_hash::FxHashMap;
 
 use std::time::Duration;
 
@@ -29,13 +30,18 @@ impl Plane {
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Particle {
+    id: u32,
     position: Vector3<f32>,
     velocity: Vector3<f32>,
 }
 
 impl Particle {
-    pub fn new(position: Vector3<f32>, velocity: Vector3<f32>) -> Particle {
-        Particle { position, velocity }
+    pub fn new(id: u32, position: Vector3<f32>, velocity: Vector3<f32>) -> Particle {
+        Particle {
+            id,
+            position,
+            velocity,
+        }
     }
 
     pub fn position(&self) -> &Vector3<f32> {
@@ -53,16 +59,20 @@ pub struct Simulation {
 impl Simulation {
     pub fn new(min_bounds: Vector3<f32>, max_bounds: Vector3<f32>) -> Self {
         let mut particles = Vec::<Particle>::new();
-        for x in -5..5 {
-            for z in -4..4 {
-                for y in -4..4 {
+
+        let mut id = 0;
+        for x in -3..3 {
+            for z in -3..3 {
+                for y in -3..3 {
                     let x_pos = x as f32 * 0.1;
                     let z_pos = z as f32 * 0.1;
                     let y_pos = y as f32 * 0.1;
                     particles.push(Particle::new(
+                        id,
                         Vector3::<f32>::new(x_pos, y_pos, z_pos),
                         Vector3::<f32>::zero(),
                     ));
+                    id += 1;
                 }
             }
         }
@@ -76,14 +86,17 @@ impl Simulation {
     }
 
     pub fn step(&mut self) -> Duration {
+        // Build the kdtree
         let mut kdtree = KdTree::new();
         self.particles
             .iter()
             .for_each(|particle| kdtree.add(particle.position.as_ref(), particle).unwrap());
 
-        let mut new_particles = Vec::with_capacity(self.particles.len());
-        // Calculate the derivative of the velocity for each particle according to
-        // Navier Stokes (momentum)
+        // Find the neighbors for each particle
+        let mut neighbor_map: FxHashMap<u32, Vec<Particle>> =
+            FxHashMap::with_capacity_and_hasher(self.particles.len(), Default::default());
+        let mut density_map: FxHashMap<u32, f32> =
+            FxHashMap::with_capacity_and_hasher(self.particles.len(), Default::default());
         self.particles.iter().for_each(|particle| {
             let neighbors = kdtree
                 .within_unsorted(
@@ -92,35 +105,77 @@ impl Simulation {
                     &squared_euclidean,
                 )
                 .unwrap();
-            let neighbors = neighbors.iter().map(|(_, particle)| particle).collect_vec();
-
-            let external_acceleration = self.config.gravity / self.config.particle_mass;
+            let neighbors = neighbors
+                .iter()
+                .map(|(_, &&particle)| particle)
+                .collect_vec();
 
             let density: f32 = neighbors
                 .iter()
                 .map(|neighbor| {
+                    let r_ij = particle.position - neighbor.position;
+                    let r = if r_ij.is_zero() {
+                        0.0
+                    } else {
+                        r_ij.magnitude()
+                    };
                     self.config.particle_mass
-                        * kernals::monaghan(
-                            (neighbor.position - particle.position).magnitude(),
+                        * kernals::monaghan(r, self.config.kernal_max_distance)
+                })
+                .sum();
+
+            density_map.insert(particle.id, density);
+            neighbor_map.insert(particle.id, neighbors);
+        });
+
+        // Do navier-stokes to find new particle positions, velocities.
+        let mut new_particles = Vec::with_capacity(self.particles.len());
+        self.particles.iter().for_each(|particle| {
+            let neighbors = neighbor_map.get(&particle.id).unwrap();
+
+            let density = *density_map.get(&particle.id).unwrap();
+            let pressure = self.pressure(density);
+
+            let pressure_gradient: Vector3<f32> = neighbors
+                .iter()
+                .map(|neighbor| {
+                    if neighbor.id == particle.id {
+                        return Vector3::<f32>::zero();
+                    }
+                    let neighbor_density = *density_map.get(&neighbor.id).unwrap();
+                    let neighbor_pressure = self.pressure(neighbor_density);
+                    self.config.particle_mass
+                        * ((pressure / density.powi(2))
+                            + (neighbor_pressure / neighbor_density.powi(2)))
+                        * kernals::monaghan_gradient(
+                            neighbor.position - particle.position,
                             self.config.kernal_max_distance,
                         )
                 })
                 .sum();
 
-            // TODO Presure gradient
-            // TODO the pressure gradient requires the pressure (duh), which relies on the density of the neighbor particles.
-            //   That would require a preliminary pass that goes over all the neighbors. Rather than calling within_sorted() for each pass,
-            //   have one prelim pass which does that, which just constructs a list of neighbor particles for each particle.
-            //    We then iterate over that map and calculate density, pressure on the fly from the neighbor lists, which is much faster
-            //    than finding the neighbors again.
+            let diffusion: Vector3<f32> = neighbors
+                .iter()
+                .map(|neighbor| {
+                    let r_ij = (neighbor.position - particle.position).normalize();
+                    let r = if r_ij.is_zero() {
+                        0.0
+                    } else {
+                        r_ij.magnitude()
+                    };
+                    self.config.particle_mass * (neighbor.velocity - particle.velocity) / density
+                        * kernals::monaghan_laplacian(r, self.config.kernal_max_distance)
+                })
+                .sum::<Vector3<f32>>()
+                * self.config.kinematic_viscosity;
 
-            // TODO Diffusion
+            let external_acceleration = self.config.gravity;
 
-            let du_dt = external_acceleration;
+            let du_dt = -pressure_gradient + diffusion + external_acceleration;
 
             let new_position = particle.position + self.config.dt * particle.velocity;
             let new_velocity = particle.velocity + self.config.dt * du_dt;
-            let new_particle = Particle::new(new_position, new_velocity);
+            let new_particle = Particle::new(particle.id, new_position, new_velocity);
             new_particles.push(new_particle);
         });
 
@@ -163,9 +218,23 @@ impl Simulation {
 
                 let collision_point = old_particle.position
                     + self.config.dt * fraction_timestep * old_particle.velocity;
-                let velocity_collision = old_particle.velocity;
+                let collision_point = collision_point + plane.normal() * consts::EPSILON;
+                let new_position = Vector3::new(
+                    collision_point.x.clamp(
+                        self.min_bounds.x + consts::EPSILON,
+                        self.max_bounds.x - consts::EPSILON,
+                    ),
+                    collision_point.y.clamp(
+                        self.min_bounds.y + consts::EPSILON,
+                        self.max_bounds.y - consts::EPSILON,
+                    ),
+                    collision_point.z.clamp(
+                        self.min_bounds.z + consts::EPSILON,
+                        self.max_bounds.z - consts::EPSILON,
+                    ),
+                );
 
-                let new_position = collision_point + plane.normal() * consts::EPSILON;
+                let velocity_collision = old_particle.velocity;
 
                 let velocity_collision_normal =
                     velocity_collision.dot(*plane.normal()) * plane.normal();
@@ -175,6 +244,7 @@ impl Simulation {
                     -1.0 * velocity_collision_normal * self.config.coefficient_of_restitution;
                 let velocity_response_tangent = if velocity_collision_tangent.is_zero()
                     || velocity_collision_tangent.magnitude().is_nan()
+                    || velocity_collision_normal.is_zero()
                 {
                     Vector3::<f32>::zero()
                 } else {
@@ -242,5 +312,9 @@ impl Simulation {
                 old_distance_to_plane.is_sign_positive() != new_distance_to_plane.is_sign_positive()
             })
             .cloned()
+    }
+
+    fn pressure(&self, density: f32) -> f32 {
+        self.config.pressure_siffness * (density - self.config.reference_density)
     }
 }

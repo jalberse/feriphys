@@ -44,6 +44,27 @@ impl Ui for SphUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.pressure_siffness,
+                    SphUi::PRESSURE_STIFFNESS_MIN..=SphUi::PRESSURE_STIFFNESS_MAX,
+                )
+                .text("Pressure Stiffness"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.reference_density,
+                    SphUi::REFERENCE_DENSITY_MIN..=SphUi::REFERENCE_DENSITY_MAX,
+                )
+                .text("Reference Density"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.kinematic_viscosity,
+                    SphUi::KINEMATIC_VISCOSITY_MIN..=SphUi::KINEMATIC_VISCOSITY_MAX,
+                )
+                .text("Kinematic Viscosity"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.gravity.x,
                     SphUi::GRAVITY_MIN..=SphUi::GRAVITY_MAX,
                 )
@@ -85,11 +106,20 @@ impl SphUi {
     const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
     const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
 
-    const PARTICLE_MASS_MIN: f32 = 0.0;
-    const PARTICLE_MASS_MAX: f32 = 5.0;
+    const PARTICLE_MASS_MIN: f32 = 0.001;
+    const PARTICLE_MASS_MAX: f32 = 0.1;
 
     const KERNAL_MAX_DIST_MIN: f32 = 0.001;
-    const KERNAL_MAX_DIST_MAX: f32 = 0.5;
+    const KERNAL_MAX_DIST_MAX: f32 = 0.15;
+
+    const PRESSURE_STIFFNESS_MIN: f32 = 0.0;
+    const PRESSURE_STIFFNESS_MAX: f32 = 1.0;
+
+    const REFERENCE_DENSITY_MIN: f32 = 0.1;
+    const REFERENCE_DENSITY_MAX: f32 = 2.0;
+
+    const KINEMATIC_VISCOSITY_MIN: f32 = 0.1;
+    const KINEMATIC_VISCOSITY_MAX: f32 = 3.0;
 
     const GRAVITY_MIN: f32 = -2.0;
     const GRAVITY_MAX: f32 = 2.0;

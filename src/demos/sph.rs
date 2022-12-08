@@ -1,4 +1,5 @@
 /// A demo of the spring-mass-damper simulation.
+use super::utils;
 use crate::{
     graphics::{
         self, camera::CameraBundle, entity::ColoredMeshEntity, forms, gpu_interface::GPUInterface,
@@ -17,8 +18,6 @@ use winit::{
     window::Window,
     window::WindowBuilder,
 };
-
-use super::utils;
 
 struct State {
     gpu: GPUInterface,
@@ -50,11 +49,11 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let min_bounds = Vector3::new(-1.0, -1.0, -1.0);
-        let max_bounds = Vector3::new(1.0, 1.0, 1.0);
+        let min_bounds = Vector3::new(-0.5, -0.5, -0.5);
+        let max_bounds = Vector3::new(0.5, 0.5, 0.5);
         let simulation = Simulation::new(min_bounds, max_bounds);
 
-        let sphere = forms::generate_sphere(&gpu.device, [0.9, 0.1, 0.1], 0.05, 8, 8);
+        let sphere = forms::generate_sphere(&gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
         let particles = simulation.get_particles();
         let particle_instances = particles
             .iter()
@@ -187,6 +186,7 @@ pub fn run() {
             Event::MainEventsCleared => {
                 let new_time = std::time::SystemTime::now();
                 let frame_time = new_time.duration_since(current_time).unwrap();
+                println!("Frame time: {}", frame_time.as_secs_f32());
                 current_time = new_time;
                 state.update(frame_time);
                 state.simulation.sync_sim_from_ui(&mut ui);
@@ -243,5 +243,6 @@ pub fn run() {
 
 fn get_obstacles() -> Vec<CollidableMesh> {
     let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
+    let vertex_positions = vertex_positions.iter().map(|v| v * 0.5).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
 }
