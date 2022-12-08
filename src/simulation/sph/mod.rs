@@ -5,6 +5,7 @@ use self::config::Config;
 use super::consts;
 
 use cgmath::{InnerSpace, Vector3, Zero};
+use itertools::Itertools;
 use kiddo::distance::{dot_product, squared_euclidean};
 use kiddo::KdTree;
 
@@ -65,6 +66,7 @@ impl Simulation {
                 }
             }
         }
+
         Simulation {
             config: Config::default(),
             particles,
@@ -90,10 +92,27 @@ impl Simulation {
                     &squared_euclidean,
                 )
                 .unwrap();
+            let neighbors = neighbors.iter().map(|(_, particle)| particle).collect_vec();
 
             let external_acceleration = self.config.gravity / self.config.particle_mass;
 
+            let density: f32 = neighbors
+                .iter()
+                .map(|neighbor| {
+                    self.config.particle_mass
+                        * kernals::monaghan(
+                            (neighbor.position - particle.position).magnitude(),
+                            self.config.kernal_max_distance,
+                        )
+                })
+                .sum();
+
             // TODO Presure gradient
+            // TODO the pressure gradient requires the pressure (duh), which relies on the density of the neighbor particles.
+            //   That would require a preliminary pass that goes over all the neighbors. Rather than calling within_sorted() for each pass,
+            //   have one prelim pass which does that, which just constructs a list of neighbor particles for each particle.
+            //    We then iterate over that map and calculate density, pressure on the fly from the neighbor lists, which is much faster
+            //    than finding the neighbors again.
 
             // TODO Diffusion
 
