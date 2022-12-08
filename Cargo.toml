@@ -29,6 +29,7 @@ egui_wgpu_backend = "0.18"
 clap = { version = "4.0.0", features = [ "derive" ] }
 rand = "0.8.4"
 rustc-hash = "1.1.0"
+kiddo = "0.2.4"
 
 [build-dependencies]
 anyhow = "1.0"

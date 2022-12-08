@@ -30,6 +30,20 @@ impl Ui for SphUi {
             );
             ui.add(
                 Slider::new(
+                    &mut self.sim_config.particle_mass,
+                    SphUi::PARTICLE_MASS_MIN..=SphUi::PARTICLE_MASS_MAX,
+                )
+                .text("Particle Mass"),
+            );
+            ui.add(
+                Slider::new(
+                    &mut self.sim_config.kernal_max_distance,
+                    SphUi::KERNAL_MAX_DIST_MIN..=SphUi::KERNAL_MAX_DIST_MAX,
+                )
+                .text("Kernal Max Dist"),
+            );
+            ui.add(
+                Slider::new(
                     &mut self.sim_config.gravity.x,
                     SphUi::GRAVITY_MIN..=SphUi::GRAVITY_MAX,
                 )
@@ -70,6 +84,12 @@ impl Ui for SphUi {
 impl SphUi {
     const SIMULATION_DT_MAX: std::time::Duration = std::time::Duration::from_millis(10);
     const SIMULATION_DT_MIN: std::time::Duration = std::time::Duration::from_micros(100);
+
+    const PARTICLE_MASS_MIN: f32 = 0.0;
+    const PARTICLE_MASS_MAX: f32 = 5.0;
+
+    const KERNAL_MAX_DIST_MIN: f32 = 0.001;
+    const KERNAL_MAX_DIST_MAX: f32 = 0.5;
 
     const GRAVITY_MIN: f32 = -2.0;
     const GRAVITY_MAX: f32 = 2.0;

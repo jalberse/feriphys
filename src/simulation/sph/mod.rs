@@ -1,12 +1,14 @@
-use std::time::Duration;
-
-use cgmath::{InnerSpace, Vector3, Zero};
+pub mod config;
+mod kernals;
 
 use self::config::Config;
-
 use super::consts;
 
-pub mod config;
+use cgmath::{InnerSpace, Vector3, Zero};
+use kiddo::distance::{dot_product, squared_euclidean};
+use kiddo::KdTree;
+
+use std::time::Duration;
 
 #[derive(Clone, Copy)]
 pub struct Plane {
@@ -24,7 +26,7 @@ impl Plane {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Particle {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
@@ -50,9 +52,9 @@ pub struct Simulation {
 impl Simulation {
     pub fn new(min_bounds: Vector3<f32>, max_bounds: Vector3<f32>) -> Self {
         let mut particles = Vec::<Particle>::new();
-        for x in -16..16 {
-            for z in -10..10 {
-                for y in -10..10 {
+        for x in -5..5 {
+            for z in -4..4 {
+                for y in -4..4 {
                     let x_pos = x as f32 * 0.1;
                     let z_pos = z as f32 * 0.1;
                     let y_pos = y as f32 * 0.1;
@@ -72,12 +74,23 @@ impl Simulation {
     }
 
     pub fn step(&mut self) -> Duration {
-        // TODO construct kdtree
+        let mut kdtree = KdTree::new();
+        self.particles
+            .iter()
+            .for_each(|particle| kdtree.add(particle.position.as_ref(), particle).unwrap());
 
         let mut new_particles = Vec::with_capacity(self.particles.len());
         // Calculate the derivative of the velocity for each particle according to
         // Navier Stokes (momentum)
         self.particles.iter().for_each(|particle| {
+            let neighbors = kdtree
+                .within_unsorted(
+                    particle.position.as_ref(),
+                    self.config.kernal_max_distance.powi(2),
+                    &squared_euclidean,
+                )
+                .unwrap();
+
             let external_acceleration = self.config.gravity / self.config.particle_mass;
 
             // TODO Presure gradient
@@ -109,6 +122,8 @@ impl Simulation {
         let ui_config_state = ui.get_gui_state_mut();
         self.config.integration = ui_config_state.integration;
         self.config.dt = ui_config_state.dt;
+        self.config.particle_mass = ui_config_state.particle_mass;
+        self.config.kernal_max_distance = ui_config_state.kernal_max_distance;
         self.config.gravity = ui_config_state.gravity;
         self.config.coefficient_of_restitution = ui_config_state.coefficient_of_restitution;
         self.config.coefficient_of_friction = ui_config_state.coefficient_of_friction;
