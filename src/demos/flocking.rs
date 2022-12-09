@@ -80,7 +80,7 @@ impl State {
             ),
             scale: 30.0,
         }];
-        let seafloor_entity = Entity::new(&gpu, seafloor_tile_model, seafloor_tile_instances);
+        let seafloor_entity = Entity::new(&gpu, seafloor_tile_model, seafloor_tile_instances, None);
 
         let ship_model = resources::load_model(
             "pirate_ship.obj",
@@ -97,7 +97,7 @@ impl State {
             ),
             scale: 1.0,
         }];
-        let ship_entity = Entity::new(&gpu, ship_model, ship_instances);
+        let ship_entity = Entity::new(&gpu, ship_model, ship_instances, None);
         let obstacles = Obstacle::from_entity(&ship_entity, 4.0);
         let obstacles_2 = obstacles.clone();
 
@@ -130,7 +130,7 @@ impl State {
         .unwrap();
         let instances = simulation.get_boid_instances();
 
-        let boids_entity = Entity::new(&gpu, fish_model, instances);
+        let boids_entity = Entity::new(&gpu, fish_model, instances, None);
 
         // Set up the second simulation that we'll display alongside the first
         let initial_boids_position_2_0 = Vector3::<f32>::new(15.0, 10.0, 0.0);
@@ -165,7 +165,7 @@ impl State {
         .unwrap();
         let instances = simulation_2.get_boid_instances();
 
-        let boids_entity_2 = Entity::new(&gpu, fish_model_2, instances);
+        let boids_entity_2 = Entity::new(&gpu, fish_model_2, instances, None);
 
         let scene = Scene::new(
             Some(vec![

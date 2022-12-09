@@ -1,8 +1,9 @@
 use std::{f32::consts::PI, time::Duration};
 
-use crate::simulation::{consts, springy::collidable_mesh, state::Stateful};
+use crate::simulation::collidable_mesh::CollidableMesh;
+use crate::simulation::{consts, state::Stateful};
 
-use super::{collidable_mesh::CollidableMesh, config::Config};
+use super::config::Config;
 use cgmath::{InnerSpace, Rad, Vector3, Zero};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
@@ -422,7 +423,7 @@ impl SpringyMesh {
     pub fn update_points(
         &mut self,
         mut new_points: Vec<Point>,
-        obstacles: &Vec<collidable_mesh::CollidableMesh>,
+        obstacles: &Vec<CollidableMesh>,
         config: &Config,
     ) {
         let obstacle_faces = obstacles
@@ -459,12 +460,19 @@ impl SpringyMesh {
 
                 let velocity_response_normal =
                     -1.0 * velocity_collision_normal * config.coefficient_of_restitution;
-                let velocity_response_tangent = velocity_collision_tangent
-                    - velocity_collision_tangent.normalize()
-                        * f32::min(
-                            config.coefficient_of_friction * velocity_collision_normal.magnitude(),
-                            velocity_collision_tangent.magnitude(),
-                        );
+                let velocity_response_tangent = if velocity_collision_tangent.is_zero()
+                    || velocity_collision_tangent.magnitude().is_nan()
+                {
+                    Vector3::<f32>::zero()
+                } else {
+                    velocity_collision_tangent
+                        - velocity_collision_tangent.normalize()
+                            * f32::min(
+                                config.coefficient_of_friction
+                                    * velocity_collision_normal.magnitude(),
+                                velocity_collision_tangent.magnitude(),
+                            )
+                };
 
                 let velocity_response = velocity_response_normal + velocity_response_tangent;
 

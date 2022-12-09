@@ -261,7 +261,7 @@ impl Simulation {
             instances.push(instance);
         }
 
-        ColoredMeshEntity::new(&gpu, mesh, instances)
+        ColoredMeshEntity::new(&gpu, mesh, instances, Some(MAX_INSTANCES))
     }
 
     pub fn get_particles_instances(&self) -> Vec<Instance> {

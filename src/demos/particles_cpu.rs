@@ -64,7 +64,7 @@ impl State {
             ),
             scale: 1.0,
         }];
-        let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances);
+        let obstacle_entity = ColoredMeshEntity::new(&gpu, obstacle, instances, None);
 
         let particles_entity = simulation_state.get_particles_entity(&gpu);
         let scene = Scene::new(

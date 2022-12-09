@@ -661,6 +661,7 @@ dependencies = [
  "glob",
  "image",
  "itertools",
+ "kiddo",
  "log",
  "pollster",
  "rand",
@@ -958,6 +959,15 @@ dependencies = [
  "libc",
  "libloading",
  "pkg-config",
+]
+
+[[package]]
+name = "kiddo"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc0a5c92307668140bf7d63a03a23e2da0b0453801fd54888c903cb7f723c293"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]

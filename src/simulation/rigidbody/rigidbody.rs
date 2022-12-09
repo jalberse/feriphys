@@ -4,8 +4,8 @@ use cgmath::{InnerSpace, Matrix, Matrix3, One, Quaternion, SquareMatrix, Vector3
 use itertools::Itertools;
 
 use crate::simulation::{
+    collidable_mesh::{self, CollidableMesh},
     consts,
-    springy::collidable_mesh::{self, CollidableMesh},
     state::Stateful,
 };
 

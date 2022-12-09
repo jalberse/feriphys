@@ -1,7 +1,7 @@
 use crate::{
     graphics::texture,
     simulation::springy::springy_mesh::SpringyMesh,
-    simulation::{rigidbody::rigidbody, springy::collidable_mesh},
+    simulation::{collidable_mesh, rigidbody::rigidbody},
 };
 
 use cgmath::Vector3;
@@ -93,11 +93,11 @@ impl ColoredMesh {
     pub fn from_collidable_mesh(
         device: &wgpu::Device,
         name: String,
-        springy_mesh: &collidable_mesh::CollidableMesh,
+        collidable_mesh: &collidable_mesh::CollidableMesh,
         color: [f32; 3],
     ) -> ColoredMesh {
         // TODO get_vertices() can be made into a Trait so this fn can be generalized with from_springy_mesh
-        let (vertex_positions, vertex_indices) = springy_mesh.get_vertices_to_render();
+        let (vertex_positions, vertex_indices) = collidable_mesh.get_vertices_to_render();
         let vertex_indices = vertex_indices.iter().map(|i| *i as u16).collect_vec();
         let (vertex_buffer, index_buffer) =
             Self::get_buffers(device, &vertex_positions, &vertex_indices, color);

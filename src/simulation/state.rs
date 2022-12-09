@@ -43,15 +43,14 @@ impl<T: Stateful> State<T> {
         State { elements }
     }
 
-    pub fn from_state_vector(mut state_vector: Vec<f32>) -> State<T> {
-        let num_elements_in_state = state_vector.len() / T::num_state_elements();
-        let mut data: Vec<T> = Vec::with_capacity(num_elements_in_state);
-        for _ in 0..num_elements_in_state {
-            let element_state_vector = state_vector.drain(0..T::num_state_elements()).collect_vec();
-            let element = T::from_state_vector(element_state_vector);
-            data.push(element);
-        }
-        State { elements: data }
+    pub fn from_state_vector(state_vector: Vec<f32>) -> State<T> {
+        let elements = state_vector
+            .into_iter()
+            .chunks(T::num_state_elements())
+            .into_iter()
+            .map(|chunk| T::from_state_vector(chunk.collect_vec()))
+            .collect_vec();
+        State { elements }
     }
 
     pub fn derivative(&self) -> Vec<f32> {

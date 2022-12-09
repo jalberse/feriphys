@@ -1,16 +1,17 @@
 /// A demo of the spring-mass-damper simulation.
+use super::utils;
 use crate::{
     graphics::{
         self, camera::CameraBundle, entity::ColoredMeshEntity, forms, gpu_interface::GPUInterface,
-        instance::Instance, light, model::ColoredMesh, scene::Scene, texture,
+        instance::Instance, light, model::ColoredMesh, texture,
     },
     gui,
     simulation::collidable_mesh::CollidableMesh,
-    simulation::springy::simulation::Simulation,
-    simulation::springy::springy_mesh::{self, SpringyMesh},
+    simulation::sph::Simulation,
 };
 
-use cgmath::{Vector3, Zero};
+use cgmath::{Rotation3, Vector3};
+use itertools::Itertools;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -18,25 +19,23 @@ use winit::{
     window::WindowBuilder,
 };
 
-use super::utils;
-
 struct State {
-    simulation: Simulation,
     gpu: GPUInterface,
     render_pipeline: wgpu::RenderPipeline,
     depth_texture: texture::Texture,
     camera_bundle: CameraBundle,
     light_bind_group: wgpu::BindGroup,
-    scene: Scene,
     mouse_pressed: bool,
     time_accumulator: std::time::Duration,
+    simulation: Simulation,
+    particles_entity: ColoredMeshEntity,
 }
 
 impl State {
     fn new(window: &Window) -> Self {
         let gpu: GPUInterface = GPUInterface::new(&window);
         let camera_bundle =
-            CameraBundle::new(&gpu, (0.0, 0.0, 5.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+            CameraBundle::new(&gpu, (0.0, 0.0, 9.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
         let depth_texture =
             texture::Texture::create_depth_texture(&gpu.device, &gpu.config, "depth texture");
 
@@ -50,24 +49,35 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let springy_cube = get_springy_cube();
-        let obstacles = get_obstacles();
-        let simulation = Simulation::new(vec![springy_cube], obstacles);
+        let min_bounds = Vector3::new(-0.5, -0.5, -0.5);
+        let max_bounds = Vector3::new(0.5, 0.5, 0.5);
+        let simulation = Simulation::new(min_bounds, max_bounds);
 
-        // Note we're keeping the scene around since we'll probably have some static obstacles that we'd like to draw
-        // for the springy mesh to interact with.
-        let scene = Scene::new(None, None, None);
+        let sphere = forms::generate_sphere(&gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
+        let particles = simulation.get_particles();
+        let particle_instances = particles
+            .iter()
+            .map(|p| Instance {
+                position: *p.position(),
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            })
+            .collect_vec();
+        let particles_entity = ColoredMeshEntity::new(&gpu, sphere, particle_instances, None);
 
         Self {
-            simulation,
             gpu,
             render_pipeline,
             depth_texture,
             camera_bundle,
             light_bind_group,
-            scene,
             mouse_pressed: false,
             time_accumulator: std::time::Duration::from_millis(0),
+            simulation,
+            particles_entity,
         }
     }
 
@@ -107,43 +117,46 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
-        // TODO handle rendering *all* springy meshes in simulation
-        let cube_mesh = ColoredMesh::from_springy_mesh(
-            &self.gpu.device,
-            "springy cube".to_string(),
-            &self.simulation.get_meshes()[0],
-            [0.9, 0.1, 0.1],
-        );
-        let cube_instances = vec![Instance::default()];
-        let cube_entity = ColoredMeshEntity::new(&self.gpu, cube_mesh, cube_instances, None);
-
-        // TODO handle rendering *all* obstacles in simulation
+        let obstacles = get_obstacles();
         let obstacle_mesh = ColoredMesh::from_collidable_mesh(
             &self.gpu.device,
             "floor".to_string(),
-            &self.simulation.get_obstacles()[0],
+            &obstacles[0],
             [0.1, 0.9, 0.1],
         );
         let obstacle_instances = vec![Instance::default()];
         let obstacle_entity =
             ColoredMeshEntity::new(&self.gpu, obstacle_mesh, obstacle_instances, None);
 
+        let particles = self.simulation.get_particles();
+        let particle_instances = particles
+            .iter()
+            .map(|p| Instance {
+                position: *p.position(),
+                rotation: cgmath::Quaternion::from_axis_angle(
+                    cgmath::Vector3::unit_z(),
+                    cgmath::Deg(0.0),
+                ),
+                scale: 1.0,
+            })
+            .collect_vec();
+        self.particles_entity
+            .update_instances(&self.gpu, particle_instances);
+
+        // TODO get other data from simulation to update Instance data to e.g. color by density, pressure, velocity, curl, etc.
+        //         That might be a function that takes an Enum for DataRequest and returns a color for it in the simulation, or something.
+
         {
             let mut render_pass =
                 utils::begin_default_render_pass(&mut encoder, &view, &self.depth_texture.view);
 
             render_pass.set_pipeline(&self.render_pipeline);
-            self.scene.draw_colored_mesh_entities(
-                &mut render_pass,
-                &self.camera_bundle.camera_bind_group,
-                &self.light_bind_group,
-            );
-            cube_entity.draw(
-                &mut render_pass,
-                &self.camera_bundle.camera_bind_group,
-                &self.light_bind_group,
-            );
             obstacle_entity.draw(
+                &mut render_pass,
+                &self.camera_bundle.camera_bind_group,
+                &self.light_bind_group,
+            );
+            self.particles_entity.draw(
                 &mut render_pass,
                 &self.camera_bundle.camera_bind_group,
                 &self.light_bind_group,
@@ -162,7 +175,7 @@ pub fn run() {
     let mut state = State::new(&window);
 
     let mut gui = gui::Gui::new(&state.gpu.device, &state.gpu.config, &window);
-    let mut ui = gui::spring_mass_damper::SpringMassDamperUi::new();
+    let mut ui = gui::sph::SphUi::new();
 
     let mut current_time = std::time::SystemTime::now();
     event_loop.run(move |event, _, control_flow| {
@@ -175,7 +188,7 @@ pub fn run() {
                 let frame_time = new_time.duration_since(current_time).unwrap();
                 current_time = new_time;
                 state.update(frame_time);
-                state.simulation.sync_sim_config_from_ui(&mut ui);
+                state.simulation.sync_sim_from_ui(&mut ui);
                 let output = state.gpu.surface.get_current_texture().unwrap();
                 let simulation_render_command_buffer = state.render(&output);
                 let gui_render_command_buffer = gui.render(
@@ -227,116 +240,8 @@ pub fn run() {
     });
 }
 
-fn get_springy_cube() -> springy_mesh::SpringyMesh {
-    let (vertex_positions, indices) = forms::get_cube_vertices();
-    let mut cube = SpringyMesh::new(
-        vertex_positions,
-        indices,
-        8.0 * 10.0,
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-        Some(springy_mesh::TorsionalSpringConfig::default()),
-        &None,
-    );
-    cube.add_strut(
-        (1, 3),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube.add_strut(
-        (2, 5),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube.add_strut(
-        (4, 6),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube.add_strut(
-        (0, 7),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube.add_strut(
-        (0, 5),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube.add_strut(
-        (2, 7),
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-    );
-    cube
-}
-
-#[allow(dead_code)]
-fn get_springy_tri() -> springy_mesh::SpringyMesh {
-    let vertex_positions = vec![
-        Vector3::<f32>::zero(),
-        Vector3::<f32>::unit_x(),
-        Vector3::<f32>::unit_y(),
-    ];
-    let indices = vec![0, 1, 2];
-    SpringyMesh::new(
-        vertex_positions,
-        indices,
-        20.0,
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-        Some(springy_mesh::TorsionalSpringConfig::default()),
-        &None,
-    )
-}
-
-#[allow(dead_code)]
-fn get_springy_quad() -> springy_mesh::SpringyMesh {
-    let vertex_positions = vec![
-        Vector3::<f32>::zero(),
-        Vector3::<f32>::unit_x(),
-        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_y(),
-        Vector3::<f32>::unit_y(),
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
-    SpringyMesh::new(
-        vertex_positions,
-        indices,
-        20.0,
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-        Some(springy_mesh::TorsionalSpringConfig::default()),
-        &None,
-    )
-}
-
-#[allow(dead_code)]
-fn get_springy_bent_quad() -> springy_mesh::SpringyMesh {
-    let vertex_positions = vec![
-        Vector3::<f32>::zero(),
-        Vector3::<f32>::unit_x(),
-        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_y(),
-        Vector3::<f32>::unit_z(),
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
-    SpringyMesh::new(
-        vertex_positions,
-        indices,
-        20.0,
-        springy_mesh::STRUT_STIFFNESS_DEFAULT,
-        springy_mesh::STRUT_DAMPING_DEFAULT,
-        Some(springy_mesh::TorsionalSpringConfig::default()),
-        &None,
-    )
-}
-
 fn get_obstacles() -> Vec<CollidableMesh> {
-    let vertex_positions = vec![
-        -Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() + Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-        -Vector3::<f32>::unit_x() - Vector3::<f32>::unit_z() - Vector3::<f32>::unit_y() * 2.0,
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
+    let vertex_positions = vertex_positions.iter().map(|v| v * 0.5).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
 }
