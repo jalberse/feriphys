@@ -49,8 +49,8 @@ impl State {
             &light_bind_group_layout,
         );
 
-        let min_bounds = Vector3::new(-0.5, -0.5, -0.5);
-        let max_bounds = Vector3::new(0.5, 0.5, 0.5);
+        let min_bounds = Vector3::new(-0.75, -0.75, -0.75);
+        let max_bounds = Vector3::new(0.75, 0.75, 0.75);
         let simulation = Simulation::new(min_bounds, max_bounds);
 
         let sphere = forms::generate_sphere(&gpu.device, [0.9, 0.1, 0.1], 0.05, 16, 16);
@@ -242,6 +242,6 @@ pub fn run() {
 
 fn get_obstacles() -> Vec<CollidableMesh> {
     let (vertex_positions, indices) = graphics::forms::get_cube_interior_normals_vertices();
-    let vertex_positions = vertex_positions.iter().map(|v| v * 0.5).collect_vec();
+    let vertex_positions = vertex_positions.iter().map(|v| v * 0.75).collect_vec();
     vec![CollidableMesh::new(vertex_positions, indices)]
 }

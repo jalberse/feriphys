@@ -61,9 +61,9 @@ impl Simulation {
         let mut particles = Vec::<Particle>::new();
 
         let mut id = 0;
-        for x in -3..3 {
-            for z in -3..3 {
-                for y in -3..3 {
+        for x in -4..4 {
+            for z in -4..4 {
+                for y in -4..4 {
                     let x_pos = x as f32 * 0.1;
                     let z_pos = z as f32 * 0.1;
                     let y_pos = y as f32 * 0.1;
