@@ -109,14 +109,14 @@ impl SphUi {
     const PARTICLE_MASS_MIN: f32 = 0.001;
     const PARTICLE_MASS_MAX: f32 = 0.1;
 
-    const KERNAL_MAX_DIST_MIN: f32 = 0.001;
-    const KERNAL_MAX_DIST_MAX: f32 = 0.15;
+    const KERNAL_MAX_DIST_MIN: f32 = 0.9;
+    const KERNAL_MAX_DIST_MAX: f32 = 0.11;
 
     const PRESSURE_STIFFNESS_MIN: f32 = 0.0;
     const PRESSURE_STIFFNESS_MAX: f32 = 1.0;
 
     const REFERENCE_DENSITY_MIN: f32 = 0.1;
-    const REFERENCE_DENSITY_MAX: f32 = 2.0;
+    const REFERENCE_DENSITY_MAX: f32 = 10.0;
 
     const KINEMATIC_VISCOSITY_MIN: f32 = 0.1;
     const KINEMATIC_VISCOSITY_MAX: f32 = 3.0;

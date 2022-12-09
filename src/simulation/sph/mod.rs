@@ -103,7 +103,7 @@ impl Simulation {
                 .unwrap();
             let neighbors = neighbors
                 .iter()
-                .filter(|neighbor| neighbor.0 < self.config.kernal_max_distance)
+                .filter(|neighbor| neighbor.0 < self.config.kernal_max_distance.powi(2))
                 .collect_vec();
             let neighbors = neighbors
                 .iter()
@@ -169,59 +169,49 @@ impl Simulation {
                 .sum::<Vector3<f32>>()
                 * self.config.kinematic_viscosity;
 
-            let surface_value: Vector3<f32> = neighbors
-                .iter()
-                .map(|neighbor| {
-                    let neighbor_density = *density_map.get(&neighbor.id).unwrap();
-                    self.config.particle_mass / neighbor_density
-                        * kernals::monaghan_gradient(
-                            particle.position - neighbor.position,
-                            self.config.kernal_max_distance,
-                        )
-                })
-                .sum();
-            let surface_normal = if surface_value.is_zero() {
-                Vector3::<f32>::zero()
-            } else {
-                surface_value.normalize()
-            };
-            let surface_divergence: f32 = neighbors
-                .iter()
-                .map(|neighbor| {
-                    let r_ij = neighbor.position - particle.position;
-                    let r = if r_ij.is_zero() {
-                        0.0
-                    } else {
-                        r_ij.magnitude()
-                    };
-                    let neighbor_density = *density_map.get(&neighbor.id).unwrap();
-                    self.config.particle_mass / neighbor_density
-                        * kernals::monaghan_laplacian(r, self.config.kernal_max_distance)
-                })
-                .sum();
+            // TODO this surface tension stuff doesn't work, it causes stuff to blow up. Fix it.
+            //let surface_value: Vector3<f32> = neighbors
+            //    .iter()
+            //    .map(|neighbor| {
+            //        let neighbor_density = *density_map.get(&neighbor.id).unwrap();
+            //        self.config.particle_mass / neighbor_density
+            //            * kernals::monaghan_gradient(
+            //                particle.position - neighbor.position,
+            //                self.config.kernal_max_distance,
+            //            )
+            //    })
+            //    .sum();
+            //let surface_normal = if surface_value.is_zero() {
+            //    Vector3::<f32>::zero()
+            //} else {
+            //    surface_value.normalize()
+            //};
+            //let surface_divergence: f32 = neighbors
+            //    .iter()
+            //    .map(|neighbor| {
+            //        let r_ij = neighbor.position - particle.position;
+            //        let r = if r_ij.is_zero() {
+            //            0.0
+            //        } else {
+            //            r_ij.magnitude()
+            //        };
+            //        let neighbor_density = *density_map.get(&neighbor.id).unwrap();
+            //        self.config.particle_mass / neighbor_density
+            //            * kernals::monaghan_laplacian(r, self.config.kernal_max_distance)
+            //    })
+            //    .sum();
+            //
+            //let surface_tension_force = if surface_value.magnitude()
+            //    > self.config.surface_tension_threshold
+            //{
+            //    -self.config.surface_tension_proportionality * surface_divergence * surface_normal
+            //} else {
+            //    Vector3::<f32>::zero()
+            //};
 
-            let surface_tension_force =
-                -self.config.surface_tension_proportionality * surface_divergence * surface_normal;
-
-            let external_acceleration =
-                self.config.gravity + surface_tension_force / self.config.particle_mass;
+            let external_acceleration = self.config.gravity; // + surface_tension_force / self.config.particle_mass;
 
             let du_dt = -pressure_gradient + diffusion + external_acceleration;
-
-            if particle.id == 0 {
-                println!(
-                    "Pressure gradient: {}, {}, {}",
-                    pressure_gradient.x, pressure_gradient.y, pressure_gradient.z
-                );
-                println!(
-                    "Diffusion: {}, {}, {}",
-                    diffusion.x, diffusion.y, diffusion.z
-                );
-                println!(
-                    "Surface tension force: {}, {}, {}",
-                    surface_tension_force.x, surface_tension_force.y, surface_tension_force.z
-                );
-            }
 
             let new_position = particle.position + self.config.dt * particle.velocity;
             let new_velocity = particle.velocity + self.config.dt * du_dt;
