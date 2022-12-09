@@ -157,7 +157,7 @@ impl Simulation {
             let diffusion: Vector3<f32> = neighbors
                 .iter()
                 .map(|neighbor| {
-                    let r_ij = (neighbor.position - particle.position).normalize();
+                    let r_ij = neighbor.position - particle.position;
                     let r = if r_ij.is_zero() {
                         0.0
                     } else {
@@ -188,7 +188,7 @@ impl Simulation {
             let surface_divergence: f32 = neighbors
                 .iter()
                 .map(|neighbor| {
-                    let r_ij = (neighbor.position - particle.position).normalize();
+                    let r_ij = neighbor.position - particle.position;
                     let r = if r_ij.is_zero() {
                         0.0
                     } else {
@@ -206,11 +206,22 @@ impl Simulation {
             let external_acceleration =
                 self.config.gravity + surface_tension_force / self.config.particle_mass;
 
-            if external_acceleration.x.is_nan() {
-                println!("NaN acceleration!")
-            }
-
             let du_dt = -pressure_gradient + diffusion + external_acceleration;
+
+            if particle.id == 0 {
+                println!(
+                    "Pressure gradient: {}, {}, {}",
+                    pressure_gradient.x, pressure_gradient.y, pressure_gradient.z
+                );
+                println!(
+                    "Diffusion: {}, {}, {}",
+                    diffusion.x, diffusion.y, diffusion.z
+                );
+                println!(
+                    "Surface tension force: {}, {}, {}",
+                    surface_tension_force.x, surface_tension_force.y, surface_tension_force.z
+                );
+            }
 
             let new_position = particle.position + self.config.dt * particle.velocity;
             let new_velocity = particle.velocity + self.config.dt * du_dt;

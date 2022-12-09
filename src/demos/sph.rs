@@ -186,7 +186,6 @@ pub fn run() {
             Event::MainEventsCleared => {
                 let new_time = std::time::SystemTime::now();
                 let frame_time = new_time.duration_since(current_time).unwrap();
-                println!("Frame time: {}", frame_time.as_secs_f32());
                 current_time = new_time;
                 state.update(frame_time);
                 state.simulation.sync_sim_from_ui(&mut ui);
