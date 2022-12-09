@@ -99,12 +99,12 @@ impl Simulation {
             FxHashMap::with_capacity_and_hasher(self.particles.len(), Default::default());
         self.particles.iter().for_each(|particle| {
             let neighbors = kdtree
-                .within_unsorted(
-                    particle.position.as_ref(),
-                    self.config.kernal_max_distance.powi(2),
-                    &squared_euclidean,
-                )
+                .nearest(particle.position.as_ref(), 8, &squared_euclidean)
                 .unwrap();
+            let neighbors = neighbors
+                .iter()
+                .filter(|neighbor| neighbor.0 < self.config.kernal_max_distance)
+                .collect_vec();
             let neighbors = neighbors
                 .iter()
                 .map(|(_, &&particle)| particle)

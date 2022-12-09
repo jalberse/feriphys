@@ -1,4 +1,4 @@
-use cgmath::Vector3;
+use cgmath::{Vector3, Zero};
 
 use super::super::state::Integration;
 
@@ -23,15 +23,15 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             integration: Integration::Euler,
-            particle_mass: 0.001,
+            particle_mass: 0.1,
             kernal_max_distance: 0.15,
             pressure_siffness: 1.0,
             reference_density: 1.0,
             kinematic_viscosity: 0.973,
             dt: Duration::from_millis(1).as_secs_f32(),
-            gravity: -Vector3::<f32>::unit_y(),
-            coefficient_of_restitution: 0.7,
-            coefficient_of_friction: 0.3,
+            gravity: Vector3::<f32>::zero(),
+            coefficient_of_restitution: 0.9,
+            coefficient_of_friction: 0.0,
             surface_tension_proportionality: 1.0,
             surface_tension_threshold: 0.5,
         }
