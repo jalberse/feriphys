@@ -1,4 +1,4 @@
-use cgmath::{Vector3, Zero};
+use cgmath::Vector3;
 
 use super::super::state::Integration;
 
@@ -15,6 +15,8 @@ pub struct Config {
     pub gravity: Vector3<f32>,
     pub coefficient_of_restitution: f32,
     pub coefficient_of_friction: f32,
+    pub surface_tension_proportionality: f32,
+    pub surface_tension_threshold: f32,
 }
 
 impl Default for Config {
@@ -27,9 +29,11 @@ impl Default for Config {
             reference_density: 1.0,
             kinematic_viscosity: 0.973,
             dt: Duration::from_millis(1).as_secs_f32(),
-            gravity: Vector3::<f32>::zero(),
+            gravity: -Vector3::<f32>::unit_y(),
             coefficient_of_restitution: 0.7,
             coefficient_of_friction: 0.3,
+            surface_tension_proportionality: 1.0,
+            surface_tension_threshold: 0.5,
         }
     }
 }

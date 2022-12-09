@@ -169,7 +169,46 @@ impl Simulation {
                 .sum::<Vector3<f32>>()
                 * self.config.kinematic_viscosity;
 
-            let external_acceleration = self.config.gravity;
+            let surface_value: Vector3<f32> = neighbors
+                .iter()
+                .map(|neighbor| {
+                    let neighbor_density = *density_map.get(&neighbor.id).unwrap();
+                    self.config.particle_mass / neighbor_density
+                        * kernals::monaghan_gradient(
+                            particle.position - neighbor.position,
+                            self.config.kernal_max_distance,
+                        )
+                })
+                .sum();
+            let surface_normal = if surface_value.is_zero() {
+                Vector3::<f32>::zero()
+            } else {
+                surface_value.normalize()
+            };
+            let surface_divergence: f32 = neighbors
+                .iter()
+                .map(|neighbor| {
+                    let r_ij = (neighbor.position - particle.position).normalize();
+                    let r = if r_ij.is_zero() {
+                        0.0
+                    } else {
+                        r_ij.magnitude()
+                    };
+                    let neighbor_density = *density_map.get(&neighbor.id).unwrap();
+                    self.config.particle_mass / neighbor_density
+                        * kernals::monaghan_laplacian(r, self.config.kernal_max_distance)
+                })
+                .sum();
+
+            let surface_tension_force =
+                -self.config.surface_tension_proportionality * surface_divergence * surface_normal;
+
+            let external_acceleration =
+                self.config.gravity + surface_tension_force / self.config.particle_mass;
+
+            if external_acceleration.x.is_nan() {
+                println!("NaN acceleration!")
+            }
 
             let du_dt = -pressure_gradient + diffusion + external_acceleration;
 
