@@ -1,4 +1,4 @@
-Feriphyis is a work in progress and its API is not stable. It is *not* mature. If you're looking for a Rust-based physics that's ready to use, check out the crates at https://arewegameyet.rs/ecosystem/physics/. Rapier in particular looks promising at the time of writing.
+Feriphys is no longer in development. If I do work on it, it is a work in progress and its API is not stable. It is *not* mature. If you're looking for a Rust-based physics that's ready to use, check out the crates at https://arewegameyet.rs/ecosystem/physics/. Rapier in particular looks promising at the time of writing.
 
 # Feriphys
 
